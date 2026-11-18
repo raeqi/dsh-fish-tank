@@ -6,11 +6,16 @@
  * test-only hooks.
  */
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 
-const checkout = '/Users/xingeng/Documents/dsh-creator-mode'
+const checkout = process.env.DSH_CHECKOUT ?? ''
+if (checkout === '' || !existsSync(path.join(checkout, 'node_modules/jsdom/package.json'))) {
+  console.log('fish tank UI flow: skipped (set DSH_CHECKOUT to a DSH source checkout)')
+  process.exit(0)
+}
 const pluginDir = path.dirname(path.dirname(new URL(import.meta.url).pathname))
 const require = createRequire(path.join(checkout, 'package.json'))
 const { JSDOM } = require('jsdom')

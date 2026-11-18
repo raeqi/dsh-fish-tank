@@ -18,6 +18,15 @@
 - 随时可以「投喂」或点水面；想攒自动储备就正常使用 DSH。
 - 页面底部分别累计**自动投喂**和**手动投喂**的粒数（离开期间消耗自动储备算自动投喂），并显示自动储备、鱼缸启用后累计的 token，以及兑换比例。
 
+## 测试
+
+```sh
+node --test test/fish-store.test.mjs
+DSH_CHECKOUT=/path/to/dsh-checkout node --test test/panel-flow.test.mjs
+```
+
+`panel-flow` 需要从 DSH 源码 checkout 借用 jsdom 和 Testing Library；没有 `DSH_CHECKOUT` 时会跳过。
+
 ## 调参
 
 比例、饥饿速度、死亡时限、生育门槛等常量在 `client.js` 顶部（`DshFishTank` 的 `TOKENS_PER_PELLET`、`HUNGER_RATE`、`STARVE_MS`、`BIRTH_PELLETS` 等）。
