@@ -19,13 +19,13 @@ var DshFishTank = (function () {
   var MAX_FISH = 8
   var MAX_PELLETS = 12
   var TOKENS_PER_PELLET = 10000
-  /** Hunger reaches full in one day, so one feeding a day keeps a fish fed. */
+  /** Hunger reaches full in one day; a pellet is a small meal, so a fish eats often. */
   var HUNGER_RATE = 1 / (24 * 3600)
   /** A fish at full hunger for this long dies. */
   var STARVE_MS = 72 * 3600 * 1000
   var FOOD_SINK_RATE = 0.018
   var EAT_RADIUS = 0.034
-  var EAT_HUNGER = 0.32
+  var EAT_HUNGER = 0.08
   var GROWTH_PER_PELLET = 0.04
   var BIRTH_PELLETS = 8
   var BIRTH_COOLDOWN_MS = 12 * 3600 * 1000
