@@ -504,3 +504,74 @@ test('new species preserve their identity when a tank is reopened', () => {
   const reopened = tank.createStore({ storage, now: clock(1000).now, random: seeded(91) })
   assert.deepEqual(plain(reopened.getFish().map(fish => fish.species)), [4, 5])
 })
+
+test('a snapshot is portable between the browser and the Host file', () => {
+  const storage = memoryStorage()
+  const clockAt = clock(1000)
+  preload(storage, stored({ reserve: 4, fish: [fish('f1'), fish('f2')] }))
+  const store = tank.createStore({ storage, now: clockAt.now, random: seeded(31) })
+  store.catchUp(clockAt.now())
+  const snapshot = store.snapshot()
+  assert.equal(typeof snapshot.updatedAt, 'number')
+  assert.equal(snapshot.fish.length, 2)
+  assert.equal(snapshot.reserve, 4)
+
+  const other = memoryStorage()
+  preload(other, { ...snapshot, updatedAt: snapshot.updatedAt + 1 })
+  const reopened = tank.createStore({ storage: other, now: clockAt.now, random: seeded(33) })
+  reopened.catchUp(clockAt.now())
+  assert.equal(reopened.summary().fish, 2)
+  assert.equal(reopened.summary().reserve, 4)
+})
+
+test('adopting a newer Host snapshot replaces the local tank', () => {
+  const storage = memoryStorage()
+  const clockAt = clock(1000)
+  preload(storage, stored({ reserve: 1, fish: [fish('local')], updatedAt: 1000 }))
+  const store = tank.createStore({ storage, now: clockAt.now, random: seeded(37) })
+  store.catchUp(clockAt.now())
+  assert.equal(store.summary().reserve, 1)
+
+  const older = { ...stored({ reserve: 9, fish: [fish('remote')], updatedAt: 500 }) }
+  assert.equal(store.adopt(older), false, 'an older file never replaces local history')
+  assert.equal(store.summary().reserve, 1)
+
+  const newer = stored({ reserve: 9, fish: [fish('remote')], updatedAt: 4000 })
+  assert.equal(store.adopt(newer), true)
+  assert.equal(store.summary().reserve, 9)
+  assert.equal(store.summary().fish, 1)
+})
+
+test('a browser without history adopts the Host snapshot even when older', () => {
+  const clockAt = clock(1000)
+  const store = tank.createStore({ storage: memoryStorage(), now: clockAt.now, random: seeded(41) })
+  store.catchUp(clockAt.now())
+  assert.equal(store.summary().fish, 3)
+  assert.equal(store.adopt(stored({ reserve: 6, fish: [fish('remote')], updatedAt: 10 })), true)
+  assert.equal(store.summary().fish, 1)
+  assert.equal(store.summary().reserve, 6)
+})
+
+test('the page component renders under a minimal hook runtime', () => {
+  let page = null
+  const ctx = {
+    effect(run) { run() },
+    locale: { register() { return () => {} }, bind() { return key => key } },
+    slots: {
+      inject(name, run) { run() },
+      register(options, component) { if (options.name === 'main') page = component; return () => {} },
+    },
+  }
+  const react = {
+    createElement(type, props, ...children) { return { type, props, children } },
+    useState(initial) { return [typeof initial === 'function' ? initial() : initial, () => {}] },
+    useRef(value) { return { current: value } },
+    useEffect() {},
+    useMemo(run) { return run() },
+  }
+  const plugin = first.registration.factory(name => (name === 'react' ? react : {}))
+  plugin.apply(ctx)
+  assert.equal(typeof page, 'function')
+  const tree = page({ t: key => key, useSessions: () => null })
+  assert.equal(tree.type, 'div')
+})

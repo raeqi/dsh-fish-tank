@@ -10,7 +10,7 @@
 - 饥饿约 **24 小时**到顶。鱼饿到顶后持续 **72 小时** 会死亡，所以离开时如果储备不够，大约 **4 天**就会失去一条鱼；回来手动喂可以救下还活着的鱼。
 - 鱼吃食会长大（手动或自动都算）。成年鱼吃够 **8 粒**后，若 12 小时内没有生过，会生下一条小鱼，鱼最多 **8 条**。
 - 关闭鱼缸后，下一次打开会按离开的时间结算：自动储备喂食、成长、生小鱼，以及饿死。只剩空缸时可以免费放入一条新鱼苗。
-- 所有状态只保存在当前浏览器（`localStorage`，键 `dsh.fish-tank.v1`），换浏览器或清除站点数据会重新开始。
+- 状态写到 DSH 主机上的 JSON 文件（默认 `~/.dsh/fish-tank/tank.json`），页面打开时读取、变化后写回；浏览器 `localStorage`（键 `dsh.fish-tank.v1`）只作缓存。详见下面「数据保存在哪」。
 
 ## 画面
 
@@ -20,6 +20,26 @@
 - 图集存放于 `assets/tropical-fish-atlas.webp`，坐标与品种顺序见同目录 JSON；Client 中内嵌同一份 WebP，适配模块加载器，运行时不需要联网或独立资源路由。图片加载期间及无 Image API 环境使用程序绘制回退。
 - 保留投食水花、吃食涟漪、出生闪光、死亡下沉淡出、水面反光、气泡和水底投影。写实素材不单独变形张嘴。
 - 旧存档的前四个鱼种索引保持一致；新增七彩神仙和荷兰凤凰追加到末尾。新鱼缸初始为七彩神仙、孔雀鱼和锦鲤神仙鱼。喂食兑换、饥饿、繁殖和离线结算规则保持一致。
+
+## 数据保存在哪
+
+- **主机文件**：插件的主机半侧在 `/fish-tank/state` 提供读写接口，把鱼缸存成一个 JSON 文件，默认 `~/.dsh/fish-tank/tank.json`（`DSH_HOME` 下）。页面打开时先读文件，状态变化后约每几秒写回一次，切走页面时立即写回。
+- **浏览器缓存**：`localStorage` 键 `dsh.fish-tank.v1` 继续保留，同一浏览器下次打开更快；文件和浏览器数据不一致时按 `updatedAt` 取较新的，Host 会拒绝比文件更旧的快照。
+- **换浏览器 / 清站点数据 / 换机器**：打开页面时会从文件恢复；换机器把 `tank.json` 复制到同路径（或下面配置的路径）即可。
+- 页面底部会显示当前数据文件路径；连不上文件时显示「数据只保存在此浏览器」，此时行为和旧版一致。
+
+### 自定义路径（放到同步盘或项目目录）
+
+在 profile 的 patch 里给这一行加配置，然后重启 DSH：
+
+```yaml
+# ~/.dsh/profiles/desktop/cordis.patch.yml
+- id: fish-tank
+  config:
+    statePath: /Users/you/iCloud/fish-tank/tank.json
+```
+
+`statePath` 必须是绝对路径。主机半侧的改动要**重启一次 DSH** 才生效（页面半侧会热替换）。
 
 ## 用法
 
@@ -31,6 +51,7 @@
 
 ```sh
 node --test test/fish-store.test.mjs
+node --test test/tank-file.test.mjs
 DSH_CHECKOUT=/path/to/dsh-checkout node --test test/panel-flow.test.mjs
 ```
 

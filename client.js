@@ -200,6 +200,51 @@ var DshFishTank = (function () {
    * @param random - source of randomness for a fresh tank.
    * @returns validated tank state.
    */
+  /**
+   * Validate one stored tank object into live state.
+   * @param parsed - parsed JSON from browser storage or the Host tank file.
+   * @param nowMs - current time in milliseconds.
+   * @param random - randomness for rebuilt scene decoration.
+   * @returns the restored state, or null when the object is not a tank.
+   */
+  function storedState(parsed, nowMs, random) {
+    if (parsed === null || typeof parsed !== 'object' || !Array.isArray(parsed.fish)) return null
+    var fish = []
+    for (var index = 0; index < parsed.fish.length; index += 1) {
+      if (isFish(parsed.fish[index])) fish.push(normalizeFish(parsed.fish[index], random))
+    }
+    if (!(fish.length > 0 || parsed.version === STATE_VERSION)) return null
+    var tokenSeen = {}
+    if (parsed.tokenSeen !== null && typeof parsed.tokenSeen === 'object') {
+      var ids = Object.keys(parsed.tokenSeen)
+      for (var seenIndex = 0; seenIndex < ids.length; seenIndex += 1) {
+        var seen = parsed.tokenSeen[ids[seenIndex]]
+        if (isNumber(seen) && seen >= 0) tokenSeen[ids[seenIndex]] = seen
+      }
+    }
+    return {
+      fish: fish.slice(0, MAX_FISH),
+      pellets: [],
+      ripples: [],
+      bubbles: createBubbles(random),
+      ghosts: [],
+      splashes: [],
+      sparkles: [],
+      reserve: isNumber(parsed.reserve) ? Math.max(0, Math.floor(parsed.reserve)) : 0,
+      tokenSeen: tokenSeen,
+      tokensCounted: isNumber(parsed.tokensCounted) ? Math.max(0, parsed.tokensCounted) : 0,
+      tokenRemainder: isNumber(parsed.tokenRemainder) ? Math.max(0, parsed.tokenRemainder) : 0,
+      autoFed: isNumber(parsed.autoFed) ? Math.max(0, Math.floor(parsed.autoFed)) : 0,
+      manualFed: isNumber(parsed.manualFed) ? Math.max(0, Math.floor(parsed.manualFed)) : 0,
+      birthProgress: isNumber(parsed.birthProgress)
+        ? clamp(Math.floor(parsed.birthProgress), 0, BIRTH_PELLETS)
+        : 0,
+      lastBirthAt: isNumber(parsed.lastBirthAt) ? parsed.lastBirthAt : 0,
+      lastStepAt: nowMs,
+      updatedAt: isNumber(parsed.updatedAt) ? parsed.updatedAt : nowMs,
+    }
+  }
+
   function readState(storage, nowMs, random) {
     var raw = null
     if (storage !== null) {
@@ -211,49 +256,13 @@ var DshFishTank = (function () {
     }
     if (raw !== null && raw !== '') {
       try {
-        var parsed = JSON.parse(raw)
-        if (parsed !== null && typeof parsed === 'object' && Array.isArray(parsed.fish)) {
-          var fish = []
-          for (var index = 0; index < parsed.fish.length; index += 1) {
-            if (isFish(parsed.fish[index])) fish.push(normalizeFish(parsed.fish[index], random))
-          }
-          if (fish.length > 0 || parsed.version === STATE_VERSION) {
-            var tokenSeen = {}
-            if (parsed.tokenSeen !== null && typeof parsed.tokenSeen === 'object') {
-              var ids = Object.keys(parsed.tokenSeen)
-              for (var seenIndex = 0; seenIndex < ids.length; seenIndex += 1) {
-                var seen = parsed.tokenSeen[ids[seenIndex]]
-                if (isNumber(seen) && seen >= 0) tokenSeen[ids[seenIndex]] = seen
-              }
-            }
-            return {
-              fish: fish.slice(0, MAX_FISH),
-              pellets: [],
-              ripples: [],
-              bubbles: createBubbles(random),
-              ghosts: [],
-              splashes: [],
-              sparkles: [],
-              reserve: isNumber(parsed.reserve) ? Math.max(0, Math.floor(parsed.reserve)) : 0,
-              tokenSeen: tokenSeen,
-              tokensCounted: isNumber(parsed.tokensCounted) ? Math.max(0, parsed.tokensCounted) : 0,
-              tokenRemainder: isNumber(parsed.tokenRemainder) ? Math.max(0, parsed.tokenRemainder) : 0,
-              autoFed: isNumber(parsed.autoFed) ? Math.max(0, Math.floor(parsed.autoFed)) : 0,
-              manualFed: isNumber(parsed.manualFed) ? Math.max(0, Math.floor(parsed.manualFed)) : 0,
-              birthProgress: isNumber(parsed.birthProgress)
-                ? clamp(Math.floor(parsed.birthProgress), 0, BIRTH_PELLETS)
-                : 0,
-              lastBirthAt: isNumber(parsed.lastBirthAt) ? parsed.lastBirthAt : 0,
-              lastStepAt: nowMs,
-              updatedAt: isNumber(parsed.updatedAt) ? parsed.updatedAt : nowMs,
-            }
-          }
-        }
+        var restored = storedState(JSON.parse(raw), nowMs, random)
+        if (restored !== null) return { state: restored, found: true }
       } catch (error) {
         console.error('[fish-tank] 本机鱼缸数据无法解析，本次从新鱼缸开始', error)
       }
     }
-    return freshState(nowMs, random)
+    return { state: freshState(nowMs, random), found: false }
   }
 
   function publicFish(fish) {
@@ -303,7 +312,9 @@ var DshFishTank = (function () {
     var storage = settings.storage === undefined ? defaultStorage() : settings.storage
     var now = settings.now === undefined ? function () { return Date.now() } : settings.now
     var random = settings.random === undefined ? Math.random : settings.random
-    var state = readState(storage, now(), random)
+    var initial = readState(storage, now(), random)
+    var state = initial.state
+    var found = initial.found
     var ready = false
     var saveFailed = false
     var lastAutoFeedAt = 0
@@ -684,27 +695,33 @@ var DshFishTank = (function () {
       return today
     }
 
+    /** The portable tank snapshot: the file format the Host persists. */
+    function snapshot() {
+      return {
+        version: STATE_VERSION,
+        updatedAt: now(),
+        fish: state.fish.map(publicFish),
+        reserve: state.reserve,
+        tokenSeen: state.tokenSeen,
+        tokensCounted: state.tokensCounted,
+        tokenRemainder: state.tokenRemainder,
+        autoFed: state.autoFed,
+        manualFed: state.manualFed,
+        birthProgress: state.birthProgress,
+        lastBirthAt: state.lastBirthAt,
+      }
+    }
+
     function save() {
       if (storage === null) {
         saveFailed = true
         return false
       }
-      var stamp = now()
+      var next = snapshot()
       try {
-        storage.setItem(STORAGE_KEY, JSON.stringify({
-          version: STATE_VERSION,
-          updatedAt: stamp,
-          fish: state.fish.map(publicFish),
-          reserve: state.reserve,
-          tokenSeen: state.tokenSeen,
-          tokensCounted: state.tokensCounted,
-          tokenRemainder: state.tokenRemainder,
-          autoFed: state.autoFed,
-          manualFed: state.manualFed,
-          birthProgress: state.birthProgress,
-          lastBirthAt: state.lastBirthAt,
-        }))
-        state.updatedAt = stamp
+        storage.setItem(STORAGE_KEY, JSON.stringify(next))
+        state.updatedAt = next.updatedAt
+        found = true
         saveFailed = false
         return true
       } catch (error) {
@@ -712,6 +729,21 @@ var DshFishTank = (function () {
         console.error('[fish-tank] 无法保存鱼缸', error)
         return false
       }
+    }
+
+    /**
+     * Adopt a tank snapshot that is newer than the one held here, such as the
+     * Host's file when this browser has no history.
+     * @param candidate - parsed tank snapshot from the Host.
+     * @returns whether the snapshot replaced the current tank.
+     */
+    function adopt(candidate) {
+      var restored = storedState(candidate, now(), random)
+      if (restored === null) return false
+      if (found && isNumber(candidate.updatedAt) && candidate.updatedAt <= state.updatedAt) return false
+      state = restored
+      found = true
+      return true
     }
 
     return {
@@ -726,6 +758,8 @@ var DshFishTank = (function () {
       placeFish: placeFish,
       takeNotices: takeNotices,
       save: save,
+      snapshot: snapshot,
+      adopt: adopt,
       getScene: function () {
         return {
           fish: state.fish,
@@ -1853,6 +1887,8 @@ window.__ModuleLoader__.load({
         'stats.ratio': '每 {per} token 攒 1 粒鱼食',
         'stats.tokens': '鱼缸启用后累计 {tokens} token',
         'stats.fed': '自动投喂 {auto} 粒 · 手动投喂 {manual} 粒',
+        'sync.file': '数据文件：{path}',
+        'sync.local': '数据只保存在此浏览器',
         'notice.died': '{count} 条鱼饿死了',
         'notice.born': '{count} 条小鱼出生了',
         'empty.title': '鱼缸空了',
@@ -1876,6 +1912,8 @@ window.__ModuleLoader__.load({
         'stats.ratio': 'Every {per} tokens earns one pellet',
         'stats.tokens': '{tokens} tokens since the tank started',
         'stats.fed': 'Auto-fed {auto} · hand-fed {manual}',
+        'sync.file': 'Data file: {path}',
+        'sync.local': 'Data is kept in this browser only',
         'notice.died': '{count} fish starved',
         'notice.born': '{count} baby fish arrived',
         'empty.title': 'The tank is empty',
@@ -1912,6 +1950,7 @@ window.__ModuleLoader__.load({
       '.dsw-fish-hungry{color:var(--dsw-alias-state-warn-primary)}',
       '.dsw-fish-meta{display:flex;flex-direction:column;gap:4px;margin:0}',
       '.dsw-fish-rule{margin:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}',
+      '.dsw-fish-sync{margin:0;overflow:hidden;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;white-space:nowrap;text-overflow:ellipsis}',
       '.dsw-fish-error{margin:0;padding:6px 10px;border:0.5px solid var(--dsw-alias-state-error-primary);border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-state-error-primary);font-size:12px;line-height:18px}',
       '[data-platform=\'darwin\'] .dsw-fish-inner{padding-top:calc(28px + var(--dsh-frame-top-clearance, 0px))}',
       '@media (max-width:720px){.dsw-fish-inner{padding:20px 20px 16px;gap:14px}}',
@@ -1986,6 +2025,9 @@ window.__ModuleLoader__.load({
         return fishGlyph(props && props.size)
       }
 
+      /** Same-origin route the Host half serves for the durable tank file. */
+      var TANK_ENDPOINT = '/fish-tank/state'
+
       function FishTankPage(props) {
         var t = props.t
         var sessions = typeof props.useSessions === 'function' ? props.useSessions(selectAllSessions) : null
@@ -2005,6 +2047,64 @@ window.__ModuleLoader__.load({
         var syncedRef = React.useRef(false)
         var canvasRef = React.useRef(null)
         var tankRef = React.useRef(null)
+        var remoteState = React.useState(function () { return { ready: false, synced: false, path: '' } })
+        var remote = remoteState[0]
+        var setRemote = remoteState[1]
+        var remoteRef = React.useRef(remote)
+        var pushTimer = React.useRef(null)
+        var pushingRef = React.useRef(false)
+
+        function applyRemote(next) {
+          remoteRef.current = next
+          setRemote(next)
+        }
+
+        /** Read the Host's tank file; `null` when the Host has no file yet. */
+        function pullTank() {
+          var controller = typeof AbortController === 'function' ? new AbortController() : null
+          if (controller !== null) setTimeout(function () { controller.abort() }, 4000)
+          return fetch(TANK_ENDPOINT, {
+            headers: { accept: 'application/json' },
+            signal: controller === null ? undefined : controller.signal,
+          }).then(function (response) {
+            if (response.status === 404) return null
+            if (!response.ok) throw new Error('fish-tank state ' + response.status)
+            return response.json()
+          })
+        }
+
+        /** Write the current tank to the Host's file. */
+        function pushTank(keepalive) {
+          if (!store.isReady() || pushingRef.current) return
+          pushingRef.current = true
+          fetch(TANK_ENDPOINT, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(store.snapshot()),
+            keepalive: keepalive === true,
+          }).then(function (response) {
+            if (!response.ok) throw new Error('fish-tank state ' + response.status)
+            return response.json()
+          }).then(function (result) {
+            pushingRef.current = false
+            var path = result !== null && typeof result.path === 'string' ? result.path : remoteRef.current.path
+            if (!remoteRef.current.synced || remoteRef.current.path !== path) {
+              applyRemote({ ready: true, synced: true, path: path })
+            }
+          }, function () {
+            pushingRef.current = false
+            if (remoteRef.current.synced) applyRemote({ ready: true, synced: false, path: remoteRef.current.path })
+          })
+        }
+
+        function schedulePush(immediate) {
+          if (!remoteRef.current.synced) return
+          if (pushTimer.current !== null) clearTimeout(pushTimer.current)
+          pushTimer.current = setTimeout(function () {
+            pushTimer.current = null
+            pushTank(false)
+          }, immediate === true ? 0 : 2000)
+        }
 
         function publish(force) {
           var next = store.summary()
@@ -2023,6 +2123,7 @@ window.__ModuleLoader__.load({
           if (!store.isReady()) return
           if (store.save()) setSaveFailed(false)
           else setSaveFailed(true)
+          schedulePush(false)
         }
 
         function finishCatchUp() {
@@ -2034,9 +2135,34 @@ window.__ModuleLoader__.load({
         }
 
         React.useEffect(function () {
+          var alive = true
+          if (typeof fetch !== 'function') {
+            applyRemote({ ready: true, synced: false, path: '' })
+            return function () { alive = false }
+          }
+          pullTank().then(function (payload) {
+            if (!alive) return
+            if (payload === null) {
+              applyRemote({ ready: true, synced: false, path: '' })
+              return
+            }
+            var path = typeof payload.path === 'string' ? payload.path : ''
+            if (payload.tank !== null && payload.tank !== undefined) store.adopt(payload.tank)
+            applyRemote({ ready: true, synced: true, path: path })
+          }, function () {
+            if (alive) applyRemote({ ready: true, synced: false, path: '' })
+          })
+          return function () {
+            alive = false
+            if (pushTimer.current !== null) clearTimeout(pushTimer.current)
+          }
+        }, [])
+
+        React.useEffect(function () {
           var added = store.absorbTokens(tokenEntries(sessions))
           syncedRef.current = true
           if (!store.isReady()) {
+            if (!remoteRef.current.ready) return
             if (sessions !== null && sessions.phase !== 'ready' && sessions.state !== 'error') return
             finishCatchUp()
             return
@@ -2045,15 +2171,15 @@ window.__ModuleLoader__.load({
             persist()
             publish(false)
           }
-        }, [sessions])
+        }, [sessions, remote.ready])
 
         React.useEffect(function () {
-          if (store.isReady()) return undefined
+          if (!remote.ready || store.isReady()) return undefined
           var timer = setTimeout(function () {
             if (!store.isReady()) finishCatchUp()
           }, 4000)
           return function () { clearTimeout(timer) }
-        }, [])
+        }, [remote.ready])
 
         React.useEffect(function () {
           if (notice === null) return undefined
@@ -2119,7 +2245,9 @@ window.__ModuleLoader__.load({
             window.addEventListener('resize', measure)
           }
           function onVisibility() {
-            if (document.visibilityState === 'hidden' && store.isReady()) persist()
+            if (document.visibilityState !== 'hidden' || !store.isReady()) return
+            persist()
+            pushTank(true)
           }
           document.addEventListener('visibilitychange', onVisibility)
 
@@ -2130,6 +2258,7 @@ window.__ModuleLoader__.load({
             else if (typeof window.removeEventListener === 'function') window.removeEventListener('resize', measure)
             document.removeEventListener('visibilitychange', onVisibility)
             if (store.isReady()) persist()
+            pushTank(true)
           }
         }, [])
 
@@ -2214,7 +2343,13 @@ window.__ModuleLoader__.load({
                 ' · ',
                 t('stats.tokens', { tokens: formatCount(stats.tokens) })),
               h('p', { className: 'dsw-fish-rule' },
-                t('stats.fed', { auto: formatCount(stats.autoFed), manual: formatCount(stats.manualFed) })))))
+                t('stats.fed', { auto: formatCount(stats.autoFed), manual: formatCount(stats.manualFed) })),
+              h('p', {
+                className: 'dsw-fish-sync',
+                title: remote.synced ? remote.path : undefined,
+              }, remote.synced && remote.path !== ''
+                ? t('sync.file', { path: remote.path })
+                : t('sync.local')))))
       }
 
       return { FishTankPage: FishTankPage, FishTankIcon: FishTankIcon }
