@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-fish-tank",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "description": "A token-fed fish tank in the DSH sidebar: spent tokens become automatic food, hand feeding is always available, and fish grow, breed, and can starve.",
@@ -16,7 +16,9 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "assets/",
+    "scripts/"
   ],
   "dsh": {
     "bundle": {
@@ -30,5 +32,9 @@
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
+  },
+  "scripts": {
+    "test": "node --test test/fish-store.test.mjs",
+    "assets:embed": "node scripts/embed-fish-atlas.mjs"
   }
 }

@@ -11,11 +11,12 @@ import vm from 'node:vm'
 
 const source = await readFile(new URL('../client.js', import.meta.url), 'utf8')
 
-function loadBundle() {
+function loadBundle(globals = {}) {
   const registrations = []
   const context = {
     window: { __ModuleLoader__: { load: registration => registrations.push(registration) } },
     console,
+    ...globals,
   }
   vm.createContext(context)
   vm.runInContext(source, context, { filename: 'client.js' })
@@ -387,3 +388,119 @@ test('a long swim keeps fish inside the water', () => {
 })
 
 console.log('fish tank simulation: ok')
+/** Recording 2D context: counts drawing calls and records failures. */
+function stubContext() {
+  const calls = []
+  const gradient = { addColorStop() {} }
+  const handler = {
+    get(target, property) {
+      if (property === 'calls') return calls
+      if (property in target) return target[property]
+      if (property === 'createLinearGradient' || property === 'createRadialGradient') {
+        return (...args) => { calls.push([property, ...args]); return gradient }
+      }
+      return (...args) => { calls.push([property, ...args]) }
+    },
+    set(target, property, value) {
+      target[property] = value
+      return true
+    },
+  }
+  return new Proxy({}, handler)
+}
+
+function sceneFor() {
+  const fish = [
+    { id: 'a', x: 0.2, y: 0.3, angle: 0.1, growth: 0.9, hunger: 0.2, hue: 18, species: 0, seed: 3 },
+    { id: 'b', x: 0.5, y: 0.5, angle: 2.9, growth: 0.5, hunger: 0.5, hue: 340, species: 1, seed: 9 },
+    { id: 'c', x: 0.7, y: 0.4, angle: 0.3, growth: 0.7, hunger: 0.8, hue: 205, species: 2, seed: 11 },
+    { id: 'd', x: 0.8, y: 0.6, angle: 3.1, growth: 0.3, hunger: 1, hue: 160, species: 3, seed: 17 },
+  ]
+  return {
+    fish,
+    pellets: [{ x: 0.4, y: 0.2, wobble: 1 }],
+    ripples: [{ x: 0.4, y: 0.2, age: 0.2 }],
+    bubbles: [{ x: 0.1, y: 0.6, r: 1, speed: 0.02, phase: 0 }],
+    ghosts: [{ fish, x: 0.3, y: 0.7, age: 0.4 }],
+    splashes: [{ x: 0.4, y: 0.25, age: 0.2 }],
+    sparkles: [{ x: 0.5, y: 0.5, age: 0.3, hue: 40 }],
+  }
+}
+
+test('the renderer draws every species and effect without throwing', () => {
+  const context = stubContext()
+  tank.drawScene(context, { width: 900, height: 400, dpr: 2 }, sceneFor(), 8000)
+  assert.ok(context.calls.length > 100, 'draws a full frame')
+  for (const species of [0, 1, 2, 3]) {
+    const single = stubContext()
+    tank.drawFish(single, {
+      x: 0.5, y: 0.5, angle: 0, growth: 1, hunger: 1, hue: 30, species, seed: 5,
+    }, 300, 200, 9000, 2, 0.8)
+    assert.ok(single.calls.length > 20, `draws species ${species}`)
+  }
+})
+
+test('cruising follows the same path at different frame rates', () => {
+  function swim(fps) {
+    const clockAt = clock(1000)
+    const storage = memoryStorage()
+    preload(storage, stored({ fish: [fish('cruiser', { x: 0.7, y: 0.5, angle: 0.2, species: 2, seed: 91 })] }))
+    const store = tank.createStore({ storage, now: clockAt.now, random: seeded(79) })
+    store.catchUp(clockAt.now())
+    for (let frame = 1; frame <= fps * 30; frame += 1) store.step(1000 + frame * 1000 / fps)
+    return store.getFish()[0]
+  }
+  const slow = swim(30)
+  const fast = swim(120)
+  assert.ok(Math.abs(slow.x - fast.x) < 0.015, 'horizontal path does not depend on frame rate')
+  assert.ok(Math.abs(slow.y - fast.y) < 0.015, 'vertical path does not depend on frame rate')
+})
+
+test('a fish near the glass turns gradually and swims back into open water', () => {
+  const clockAt = clock(1000)
+  const storage = memoryStorage()
+  preload(storage, stored({ fish: [fish('edge', { x: 0.94, y: 0.5, angle: 0, species: 2, seed: 91 })] }))
+  const store = tank.createStore({ storage, now: clockAt.now, random: seeded(79) })
+  store.catchUp(1000)
+  let previous = store.getFish()[0].angle
+  for (let frame = 1; frame <= 600; frame += 1) {
+    store.step(1000 + frame * 16)
+    const current = store.getFish()[0]
+    const delta = Math.atan2(Math.sin(current.angle - previous), Math.cos(current.angle - previous))
+    assert.ok(Math.abs(delta) < 0.025, 'turn has no sudden bounce')
+    previous = current.angle
+  }
+  assert.ok(store.getFish()[0].x < 0.9, 'returns to open water')
+})
+
+test('the photographic renderer uses the correct atlas cell for all six species', () => {
+  let images = 0
+  class LoadedImage {
+    constructor() { images += 1 }
+    set src(value) {
+      assert.ok(value.startsWith('data:image/webp;base64,'), 'asset ships offline in the Client bundle')
+      this.onload()
+    }
+  }
+  const { tank: photographic } = loadBundle({ Image: LoadedImage })
+  for (let species = 0; species < 6; species += 1) {
+    const context = stubContext()
+    photographic.drawFish(context, fish('photo', { species }), 800, 500, 10, 1, 1)
+    const draw = context.calls.find(call => call[0] === 'drawImage')
+    assert.ok(draw, 'draws a photographic fish')
+    assert.equal(draw[2], species % 3 * 512)
+    assert.equal(draw[3], Math.floor(species / 3) * 512)
+  }
+  assert.equal(images, 1, 'one shared atlas per page')
+})
+
+test('new species preserve their identity when a tank is reopened', () => {
+  const storage = memoryStorage()
+  preload(storage, stored({ fish: [fish('discus', { species: 4 }), fish('ram', { species: 5 })] }))
+  const store = tank.createStore({ storage, now: clock(1000).now, random: seeded(91) })
+  store.catchUp(1000)
+  assert.deepEqual(plain(store.getFish().map(fish => fish.species)), [4, 5])
+  assert.equal(store.save(), true)
+  const reopened = tank.createStore({ storage, now: clock(1000).now, random: seeded(91) })
+  assert.deepEqual(plain(reopened.getFish().map(fish => fish.species)), [4, 5])
+})
