@@ -7,6 +7,7 @@
  * another machine, or point `statePath` at a synchronized folder, and every
  * browser that reaches this Host sees the same tank.
  */
+import { createSourceResolver } from './account-source.js'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, join } from 'node:path'
@@ -15,7 +16,7 @@ import { dirname, isAbsolute, join } from 'node:path'
 export const STATE_ROUTE = '/fish-tank/state'
 
 /** Largest accepted snapshot; the real tank is a few kilobytes. */
-const MAX_BODY_BYTES = 256 * 1024
+const MAX_BODY_BYTES = 16 * 1024 * 1024
 
 /** Fingerprint of the file format this half writes and reads. */
 const FILE_VERSION = 1
@@ -96,7 +97,17 @@ export function createTankFile(path) {
  * @param req - incoming HTTP request.
  * @param res - response to complete.
  */
+const writeQueues = new WeakMap()
+
 export async function handleStateRequest(file, req, res) {
+  if (req.method !== 'POST') return handleStateRequestUnlocked(file, req, res)
+  const previous = writeQueues.get(file) || Promise.resolve()
+  const current = previous.catch(() => {}).then(() => handleStateRequestUnlocked(file, req, res))
+  writeQueues.set(file, current)
+  return current
+}
+
+async function handleStateRequestUnlocked(file, req, res) {
   const send = (status, body) => {
     const payload = JSON.stringify(body)
     res.writeHead(status, {
@@ -109,7 +120,8 @@ export async function handleStateRequest(file, req, res) {
   try {
     if (req.method === 'GET' || req.method === 'HEAD') {
       const tank = await file.read()
-      send(200, { path: file.path, tank: tank })
+      const metadata = typeof file.metadata === 'function' ? await file.metadata() : { sync: 'host', account: { status: 'unavailable' } }
+      send(200, { path: file.path, tank: tank, ...metadata })
       return
     }
     if (req.method !== 'POST') {
@@ -131,13 +143,22 @@ export async function handleStateRequest(file, req, res) {
       return
     }
     const stored = await file.read()
+    if (file.requiresRevision) {
+      const metadata = await file.metadata()
+      if (incoming.cloudRevision !== metadata.revision) { send(409, { saved: false, error: 'Cloud changed; local data retained' }); return }
+    }
+    if (stored !== null && Number.isInteger(stored.featureVersion) && stored.featureVersion > (Number.isInteger(incoming.featureVersion) ? incoming.featureVersion : 0)) {
+      send(409, { saved: false, error: 'A newer aquarium format is stored; update this client' })
+      return
+    }
     if (stored !== null && typeof stored.updatedAt === 'number' && stored.updatedAt > incoming.updatedAt) {
       send(200, { saved: false, path: file.path, updatedAt: stored.updatedAt, tank: stored })
       return
     }
     const snapshot = Object.assign({}, incoming, { fileVersion: FILE_VERSION })
     await file.write(snapshot)
-    send(200, { saved: true, path: file.path, updatedAt: snapshot.updatedAt })
+    const metadata = typeof file.metadata === 'function' ? await file.metadata() : {}
+    send(200, { saved: true, path: file.path, updatedAt: snapshot.updatedAt, ...metadata })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     if (!res.headersSent) send(500, { error: message })
@@ -170,11 +191,19 @@ function readBody(req) {
  * @param config - Loader row config, optionally carrying `statePath`.
  */
 export function apply(ctx, config) {
-  const file = createTankFile(resolveStatePath(config, process.env))
+  const options = config || {}
+  const file = createTankFile(resolveStatePath(options, process.env))
+  const resolve = createSourceResolver(ctx, options, file)
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: STATE_ROUTE,
     auth: 'required',
-    handler: (req, res) => handleStateRequest(file, req, res),
+    handler: async (req, res) => {
+      try { return await handleStateRequest(await resolve(), req, res) }
+      catch {
+        res.writeHead(503, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+        res.end(JSON.stringify({ error: 'Account storage unavailable; local data retained' }))
+      }
+    },
   }), 'fish-tank: tank file route')
 }

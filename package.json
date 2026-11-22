@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-fish-tank",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "description": "A token-fed planted aquarium with parent bonding, a nursery, rare river visitors, a fish journal, a sanctuary, and propagating plants.",
@@ -19,7 +19,8 @@
     "README.md",
     "assets/",
     "scripts/",
-    "UPGRADING.md"
+    "UPGRADING.md",
+    "account-source.js"
   ],
   "dsh": {
     "bundle": {
@@ -35,7 +36,7 @@
     }
   },
   "scripts": {
-    "test": "node --test test/fish-store.test.mjs",
+    "test": "node --test test/fish-store.test.mjs test/tank-file.test.mjs test/account-source.test.mjs",
     "assets:embed": "node scripts/embed-fish-atlas.mjs"
   }
 }

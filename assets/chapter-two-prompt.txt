@@ -1,0 +1,12 @@
+Use case photorealistic-natural. Asset: transparent 2D aquarium game atlas, exactly 2048x1024 landscape, STRICT 4 columns by 2 rows, each cell512x512, exactly eight separate subjects, fully inside their own cell with 35px padding, no overlap. Every fish faces RIGHT in perfect flat lateral side profile, whole animal fins visible. Last two cells are a turtle and fish eggs. Genuinely transparent background with fine fin translucency; no aquarium, no floor, no water, no shadows, no labels. Exquisite authentic aquarium macro photography, organic lifelike anatomy, richly detailed fine scales, smooth silken fins, true natural freshwater fish colors, crisp eyes.
+Row1 left: red tiger Oscar cichlid, broad oval dark charcoal body with gorgeous red-orange irregular tiger markings, strong jaw, orange iris.
+Row1 second: ornate bichir, beautiful elongated cylindrical cream gold and black patterned primitive fish, distinct small finlets along the back, broad head, elegant paddle-like pectoral fins, whole long tail.
+Row1 third: tiger barb, compact golden yellow diamond-shaped body, four distinct black vertical bands, orange red nose and fin tips.
+Row1 right: zebra danio, very slender silver blue body, five crisp metallic blue horizontal stripes, delicate transparent fins.
+Row2 left: Boesemani rainbowfish, striking oval body, front half iridescent royal blue, rear half vivid sunset orange-yellow, delicate dorsal and forked caudal fins.
+Row2 second: panda corydoras catfish, adorable short cream body, black eye band and black tail patch, tiny mouth barbels, natural benthic fish profile, not cartoon.
+Row2 third: ONE cute juvenile red-eared slider turtle, realistic green olive patterned shell, head pointing right, all four tiny limbs visible, head and neck extended, gentle almost side-on three-quarter overhead view, whole shell and body natural proportions.
+Row2 right: ONE small isolated clutch of about 12 translucent cream amber fish eggs, clustered on a tiny natural dark green aquatic leaf, tiny embryo dots in eggs, three-quarter macro photograph.
+The atlas will be cropped in fixed cells. No subject may cross grid boundaries. Photographs, not vector graphics, not toys, not illustrations.
+
+Background extraction: Built-in imagegen edit removed the white background and grid lines, preserving the eight subjects and cell positions.

@@ -162,3 +162,33 @@ test('apply registers one exact, peer-gated route and disposes it', () => {
   disposed[0]()
   assert.equal(registered.length, 0)
 })
+
+test('concurrent writes cannot replace a newer snapshot with an older one', async () => {
+  const path = await tankPath()
+  const file = createTankFile(path)
+  const newer = response(), older = response()
+  await Promise.all([
+    handleStateRequest(file, request('POST', JSON.stringify(snapshot(5000))), newer),
+    handleStateRequest(file, request('POST', JSON.stringify(snapshot(4000))), older),
+  ])
+  assert.equal((await file.read()).updatedAt, 5000)
+  assert.equal(JSON.parse(older.captured.body).saved, false)
+})
+
+test('cloud storage rejects a stale browser revision before writing', async () => {
+  let writes = 0
+  const file = { path: '', requiresRevision: true, read: async () => snapshot(1000), metadata: () => ({ revision: 4 }), write: async () => { writes += 1 } }
+  const stale = response()
+  await handleStateRequest(file, request('POST', JSON.stringify({ ...snapshot(2000), cloudRevision: 3 })), stale)
+  assert.equal(stale.captured.status, 409)
+  assert.equal(writes, 0)
+})
+
+test('old clients cannot overwrite a newer unlimited-aquarium snapshot', async()=>{
+  const path=await tankPath(),file=createTankFile(path)
+  await file.write({...snapshot(1000),featureVersion:2,fish:Array.from({length:20},(_,i)=>({id:'fish-'+i}))})
+  const old=response()
+  await handleStateRequest(file,request('POST',JSON.stringify(snapshot(2000))),old)
+  assert.equal(old.captured.status,409)
+  assert.equal((await file.read()).fish.length,20)
+})

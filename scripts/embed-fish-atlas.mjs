@@ -7,6 +7,7 @@ for (const [name, path] of [
   ['FISH_ATLAS_SOURCE', 'assets/tropical-fish-atlas.webp'],
   ['RARE_FISH_ATLAS_SOURCE', 'assets/rare-fish-atlas.webp'],
   ['PLANT_ATLAS_SOURCE', 'assets/aquatic-leaves.webp'],
+  ['CHAPTER_ATLAS_SOURCE', 'assets/chapter-two.webp'],
 ]) {
   const pattern = new RegExp(`var ${name} = '[^']*'`)
   if (!pattern.test(source)) throw new Error(`Atlas declaration missing: ${name}`)
@@ -15,4 +16,6 @@ for (const [name, path] of [
 }
 const { frames } = JSON.parse(await readFile(new URL('assets/tropical-fish-atlas.json', root), 'utf8'))
 source = source.replace(/var FISH_ATLAS_FRAMES = [^\n]+/, `var FISH_ATLAS_FRAMES = ${JSON.stringify(frames)}`)
+const chapter = JSON.parse(await readFile(new URL('assets/chapter-two.json', root), 'utf8'))
+source = source.replace(/var CHAPTER_ATLAS_SIZE = [^\n]+/, `var CHAPTER_ATLAS_SIZE = ${JSON.stringify([chapter.width, chapter.height])}`)
 await writeFile(client, source)

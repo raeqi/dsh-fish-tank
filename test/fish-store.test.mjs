@@ -257,7 +257,7 @@ test('tokens earned while away feed the fish on the next open', () => {
   assert.ok(store.summary().reserve < 60)
 })
 
-test('well-fed adults breed, capped at the tank limit', () => {
+test('well-fed adults continue breeding without a population cap', () => {
   const storage = memoryStorage()
   const clockAt = clock(1000)
   preload(storage, stored({
@@ -269,7 +269,6 @@ test('well-fed adults breed, capped at the tank limit', () => {
   const store = tank.createStore({ storage, now: clockAt.now, random: seeded(41) })
   store.catchUp(clockAt.now())
   assert.ok(store.summary().fish > 2)
-  assert.ok(store.summary().fish <= tank.MAX_FISH)
   assert.ok(store.takeNotices().born > 0)
 })
 
@@ -493,7 +492,7 @@ test('the photographic renderer uses the correct atlas cell for all twelve speci
     assert.equal(draw[2], species % 3 * 512)
     assert.equal(draw[3], Math.floor((species % 6) / 3) * 512)
   }
-  assert.equal(images, 2, 'two shared atlases per page')
+  assert.equal(images, 3, 'three fish atlases shared per page')
 })
 
 test('new species preserve their identity when a tank is reopened', () => {
@@ -577,14 +576,10 @@ test('the eighth ordinary breeding attempt guarantees a rare or legendary fry', 
   assert.equal(run.store.gameSummary().breedPity, 0)
 })
 
-test('a ready nursery waits safely at capacity and hatches when room becomes available', () => {
+test('a ready nursery hatches even when eight fish already live in the tank', () => {
   const stamp = 1800000000000
   const run = gameTank({ fish: Array.from({ length: 8 }, (_, i) => fish('resident-' + i, { species: i % 6, seed: i, growth: 0.5 })), game: { nursery: { species: 10, createdAt: stamp - 21 * 60000, readyAt: stamp - 60000, generation: 3, parentIds: [], care: 0 } } })
-  assert.equal(run.store.summary().fish, 8)
-  assert.equal(run.store.gameSummary().nursery.waiting, true)
-  assert.equal(run.store.archiveFish('resident-0'), true)
-  assert.equal(run.store.summary().fish, 8)
-  assert.equal(run.store.gameSummary().archive.length, 1)
+  assert.equal(run.store.summary().fish, 9)
   assert.equal(run.store.gameSummary().nursery, null)
   assert.equal(run.store.getFish().find(fish => fish.species === 10).generation, 3)
 })
@@ -618,16 +613,18 @@ test('visits spend tickets independently of food and obey the tenth-visit guaran
   assert.equal(run.store.welcomeVisitor(), false)
 })
 
-test('visitors are safely accommodated in the sanctuary when the aquarium is full', () => {
+test('new visitors enter the tank directly beyond the old eight-fish limit', () => {
   const run = gameTank({ fish: Array.from({ length: 8 }, (_, i) => fish('fish-' + i, { species: i % 6 })), game: { tickets: 1 } })
   assert.equal(run.store.welcomeVisitor(), true)
-  assert.equal(run.store.summary().fish, 8)
-  assert.equal(run.store.gameSummary().archive.length, 1)
+  assert.equal(run.store.summary().fish, 9)
+  assert.equal(run.store.gameSummary().archive.length, 0)
   assert.equal(run.store.gameSummary().tickets, 0)
+  const visitor = run.store.getFish().find(fish => fish.origin === 'visitor')
+  assert.equal(run.store.archiveFish(visitor.id), true)
   const saved = run.store.gameSummary().archive[0]
   run.clockAt.advance(8 * 86400000)
   run.store.step(run.clockAt.now())
-  assert.deepEqual(plain(run.store.gameSummary().archive[0]), plain(saved), 'sanctuary pauses the fish simulation')
+  assert.deepEqual(plain(run.store.gameSummary().archive[0]), plain(saved), 'manual sanctuary still pauses the fish simulation')
 })
 
 test('moving fish to the sanctuary and back preserves identity and discoveries', () => {
@@ -693,12 +690,12 @@ test('the first upgraded save preserves the original JSON once without overwriti
   assert.equal(run.storage.getItem('dsh.fish-tank.before-v3'), original)
 })
 
-test('a full aquarium and full sanctuary preserve visit tickets', () => {
+test('neither aquarium nor sanctuary limits block keeping new fish', () => {
   const run = gameTank({ fish: Array.from({ length: 8 }, (_, i) => fish('tank-' + i, { species: i % 6 })), game: { tickets: 2, archive: Array.from({ length: 128 }, (_, i) => fish('archive-' + i, { species: i % 6 })) } })
-  assert.equal(run.store.welcomeVisitor(), false)
-  assert.equal(run.store.gameSummary().tickets, 2)
-  assert.equal(run.store.archiveFish('tank-0'), false)
-  assert.equal(run.store.restoreFish('archive-0'), false)
+  assert.equal(run.store.welcomeVisitor(), true)
+  assert.equal(run.store.gameSummary().tickets, 1)
+  assert.equal(run.store.archiveFish('tank-0'), true)
+  assert.equal(run.store.restoreFish('archive-0'), true)
 })
 
 test('a snapshot is portable between the browser and the Host file', () => {
@@ -790,4 +787,132 @@ test('Host snapshots carry nursery, guarantees, sanctuary, discoveries and plant
   const readback = other.snapshot()
   assert.equal(readback.game.nursery.species, snapshot.game.nursery.species)
   assert.equal(readback.game.breedPity, snapshot.game.breedPity)
+})
+
+test('each million lifetime tokens expands the habitat without spending food or visits', () => {
+  const run = gameTank({ tokensCounted: 990000, tokenSeen: { s1: 990000 }, reserve: 4 })
+  assert.equal(run.store.summary().tank.level, 1)
+  run.store.absorbTokens([{ id: 's1', total: 3010000 }])
+  const current = run.store.summary()
+  assert.equal(current.tank.level, 4)
+  assert.equal(current.tank.space, 20)
+  assert.equal(current.reserve, 206)
+  assert.equal(current.game.tickets, 20)
+  assert.equal(current.tank.nextTokens, 990000)
+  run.store.save()
+  const reopened = tank.createStore({ storage: run.storage, now: run.clockAt.now })
+  assert.equal(reopened.summary().tank.level, 4)
+})
+
+test('existing lifetime tokens unlock expansions on upgrade without retroactive reward draws', () => {
+  const run = gameTank({ tokensCounted: 22000000, reserve: 2000 })
+  assert.equal(run.store.summary().tank.level, 23)
+  assert.equal(run.store.gameSummary().tickets, 0)
+  assert.equal(run.store.summary().reserve, 2000)
+})
+
+test('large schools and a large sanctuary survive save, reopen and a swim', () => {
+  const run = gameTank({ tokensCounted: 10000000, fish: Array.from({ length: 300 }, (_, i) => fish('school-' + i, { species: i % 12, seed: i, x: 0.1 + (i % 20) * 0.04, y: 0.2 + (i % 12) * 0.04 })), game: { archive: Array.from({ length: 180 }, (_, i) => fish('archive-' + i, { species: i % 12 })) } })
+  run.store.save()
+  const reopened = tank.createStore({ storage: run.storage, now: run.clockAt.now, random: seeded(151) })
+  reopened.catchUp(run.clockAt.now())
+  run.clockAt.advance(16)
+  reopened.step(run.clockAt.now())
+  assert.equal(reopened.getFish().length, 300)
+  assert.equal(reopened.gameSummary().archive.length, 180)
+  assert.ok(reopened.getFish().every(fish => Number.isFinite(fish.x) && Number.isFinite(fish.y)))
+})
+
+test('direct account totals replace estimates and never double-credit session usage', () => {
+  const run = gameTank({ reserve: 3 })
+  assert.equal(run.store.absorbAccountTotal('account-1', 10000000), true)
+  assert.equal(run.store.summary().tokens, 10000000)
+  assert.equal(run.store.summary().reserve, 3, 'first account read is a reward baseline')
+  assert.equal(run.store.absorbAccountTotal('account-1', 10100000), true)
+  assert.equal(run.store.summary().reserve, 13)
+  assert.equal(run.store.gameSummary().tickets, 1)
+  run.store.absorbAccountTotal('account-1', 10100000)
+  run.store.absorbAccountTotal('account-1', 10000000)
+  assert.equal(run.store.summary().reserve, 13)
+  assert.deepEqual(plain(run.store.absorbTokens([{ id: 's1', total: 99999999 }])), { pellets: 0, tokens: 0 })
+  assert.equal(run.store.absorbAccountTotal('other-account', 90000000), false)
+  run.store.save()
+  const reopened = tank.createStore({ storage: run.storage, now: run.clockAt.now })
+  reopened.absorbAccountTotal('account-1', 10200000)
+  assert.equal(reopened.summary().reserve, 23)
+})
+
+test('completing the first collection unlocks six more species and new visitors', () => {
+  const rolls=[];const fallback=seeded(203)
+  const run=gameTank({game:{discovered:Array.from({length:12},(_,i)=>i),tickets:4}},()=>rolls.length?rolls.shift():fallback())
+  assert.equal(run.store.gameSummary().chapter,2)
+  rolls.push(0.99,0.2)
+  assert.equal(run.store.welcomeVisitor(),true)
+  const visitor=run.store.getFish().find(fish=>fish.origin==='visitor')
+  assert.ok([14,15,17].includes(visitor.species))
+  assert.ok(run.store.gameSummary().discovered.includes(visitor.species))
+})
+
+function predatorTank({hunting=true,preyOverrides={},extraGame={}}={}) {
+  return gameTank({reserve:0,fish:[fish('hunter',{species:12,x:.5,y:.5,growth:1,hunger:.65,seed:11}),fish('prey',{species:0,x:.51,y:.5,growth:.2,hunger:.4,origin:'bred',seed:99,...preyOverrides}),...Array.from({length:14},(_,i)=>fish('resident-'+i,{species:i%6,x:.1+(i%4)*.2,y:.2+(i%3)*.15,growth:.6,hunger:.3,origin:'starter',seed:i*31}))],game:{chapter:2,hunting,...extraGame}})
+}
+
+test('hunting is opt-in and catches only common home-bred fry during live frames',()=>{
+  const off=predatorTank({hunting:false});off.clockAt.advance(16);off.store.step(off.clockAt.now());assert.equal(off.store.getFish().length,16)
+  const run=predatorTank();run.clockAt.advance(16);run.store.step(run.clockAt.now())
+  assert.equal(run.store.getFish().length,15)
+  assert.equal(run.store.getFish().some(fish=>fish.id==='prey'),false)
+  assert.equal(run.store.gameSummary().hunted,1)
+  assert.ok(run.store.getFish().find(fish=>fish.id==='hunter').lastHuntAt>0)
+})
+
+test('rare fry, original fish and larger fish are protected from hunting',()=>{
+  for(const preyOverrides of [{species:6},{origin:'starter'},{growth:.5}]){
+    const run=predatorTank({preyOverrides});run.clockAt.advance(16);run.store.step(run.clockAt.now())
+    assert.equal(run.store.getFish().length,16)
+    assert.ok(run.store.getFish().some(fish=>fish.id==='prey'))
+  }
+})
+
+test('food interrupts hunting and offline catch-up never runs predation',()=>{
+  const run=predatorTank();run.store.dropFood(.5,.5);run.clockAt.advance(16);run.store.step(run.clockAt.now());assert.equal(run.store.getFish().length,16)
+  const storage=memoryStorage();preload(storage,stored({updatedAt:1800000000000-3600000,fish:run.store.getFish(),game:{chapter:2,hunting:true}}))
+  const other=tank.createStore({storage,now:()=>1800000000000,random:seeded(209)});other.catchUp(1800000000000)
+  assert.equal(other.gameSummary().hunted,0)
+  assert.equal(other.getFish().length,16)
+})
+
+test('care milestones grant one permanent turtle companion across reloads',()=>{
+  const run=gameTank({tokensCounted:1000000,game:{births:3,garden:{growth:.8,patches:5,cuttings:0}}})
+  assert.ok(run.store.gameSummary().turtle)
+  assert.equal(run.store.takeNotices().turtle,1)
+  run.store.save()
+  const other=tank.createStore({storage:run.storage,now:run.clockAt.now,random:seeded(211)});other.catchUp(run.clockAt.now())
+  assert.ok(other.gameSummary().turtle)
+  assert.equal(other.takeNotices().turtle,0)
+  assert.equal(other.summary().fish,2,'turtle is a companion, not an extra fish')
+})
+
+test('second-chapter fish render at a valid positive size',()=>{
+  class LoadedImage {set src(value){this.onload()}}
+  const {tank:photos}=loadBundle({Image:LoadedImage})
+  for(let species=12;species<18;species++){
+    const context=stubContext();photos.drawFish(context,fish('new',{species}),800,500,10,1,1)
+    const call=context.calls.find(item=>item[0]==='drawImage')
+    assert.ok(call)
+    assert.ok(call.slice(2).every(value=>Number.isFinite(value)))
+    assert.ok(call[4]>0&&call[5]>0)
+  }
+})
+
+test('verified cloud accounts do not mix fish from a different account',()=>{
+  const run=gameTank()
+  assert.equal(run.store.adoptScoped('alice',null),true)
+  assert.equal(run.store.snapshot().ownerId,'alice')
+  assert.equal(run.store.getFish().length,2)
+  const other=stored({ownerId:'bob',updatedAt:1,fish:[fish('bobs-fish',{species:3})]})
+  assert.equal(run.store.adoptScoped('bob',other),true)
+  assert.equal(run.store.getFish()[0].id,'bobs-fish')
+  assert.equal(run.store.snapshot().ownerId,'bob')
+  assert.equal(run.store.adoptScoped('alice',other),false)
 })
