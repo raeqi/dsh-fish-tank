@@ -1,0 +1,5 @@
+Generated using the built-in imagegen tool for this project, 2026-11-23.
+The PNG is a resized encoding of the generated transparent image.
+
+Prompt:
+Create a single high-quality game sprite asset: one natural freshwater aquarium Anubias nana plant cluster with 7 to 10 overlapping individually readable dark emerald green broad leaves, each leaf with subtle veins, realistic wet translucent highlights and natural irregular edges. Rooted base at the bottom center, leaves radiating to both sides and upward. Photorealistic nature-documentary/game-quality cutout, three-quarter front view, no substrate or rock. Fully isolated on genuine transparent background, with full leaves intact and a clear silhouette. No fish, no water bubbles, no text, no containers. The asset will be animated as a foreground layer in an interactive aquarium.
