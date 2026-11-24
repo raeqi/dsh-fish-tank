@@ -9,12 +9,12 @@ import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 
-const checkout = process.env.DSH_CHECKOUT ?? ''
-if (checkout === '' || !existsSync(path.join(checkout, 'node_modules/jsdom/package.json'))) {
-  console.log('fish tank UI flow: skipped (set DSH_CHECKOUT to a DSH source checkout)')
-  process.exit(0)
+const checkout = process.env.DSH_CHECKOUT || path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+if (!existsSync(path.join(checkout, 'node_modules/jsdom/package.json'))) {
+  console.error('fish tank UI flow requires local dev dependencies (run npm ci), or set DSH_CHECKOUT')
+  process.exit(1)
 }
 const pluginDir = path.dirname(path.dirname(new URL(import.meta.url).pathname))
 const require = createRequire(path.join(checkout, 'package.json'))
@@ -35,6 +35,8 @@ globalThis.Node = dom.window.Node
 globalThis.Event = dom.window.Event
 globalThis.MouseEvent = dom.window.MouseEvent
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
+// Exercise the documented local-only path synchronously; host I/O has separate tests.
+globalThis.fetch = undefined
 
 const drawContext = new Proxy({}, {
   get(target, property) {
@@ -292,6 +294,27 @@ cleanup()
   assert.ok(screen.getByRole('alert'), 'a failed save is visible')
   cleanup()
   globalThis.localStorage = originalStorage
+}
+
+{
+  localStorage.clear()
+  const initial = stored([fish('delayed', { hunger: 0.4 })], {
+    updatedAt: Date.now() - 5 * 86400 * 1000,
+    tokenSeen: { s1: 0 },
+  })
+  localStorage.setItem('dsh.fish-tank.v1', JSON.stringify(initial))
+  sessionState = { ids: [], byId: {}, phase: 'pending', state: 'idle' }
+  const { t, page } = install()
+  const view = mount(page, t)
+  assert.ok(screen.getByText('Waiting for session usage before settling the tank.'))
+  assert.equal(screen.getByRole('button', { name: 'Feed' }).disabled, true)
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 4100)) })
+  assert.equal(JSON.parse(localStorage.getItem('dsh.fish-tank.v1')).fish.length, 1, 'pending usage cannot commit deaths')
+  sessionState = sessionsWith(2000000)
+  act(() => view.rerender(React.createElement(page.component, { t, useSessions })))
+  flushFrames()
+  assert.ok(JSON.parse(localStorage.getItem('dsh.fish-tank.v1')).fish.length > 0, 'usage is applied before catch-up')
+  cleanup()
 }
 
 console.log('fish tank UI flow: ok')

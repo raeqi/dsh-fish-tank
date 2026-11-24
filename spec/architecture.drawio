@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" version="26.0.0" type="device">
+  <diagram id="client" name="客户端与渲染">
+    <mxGraphModel dx="1500" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="鱼缸当前架构 · 客户端与渲染" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=26;fontColor=#163d31;fontFamily=Arial;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="45" y="24" width="1200" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="源码现状：DSH 2.1 玩法 + 模块化客户端；箭头表示依赖或数据流" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=14;fontColor=#4b625b;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="45" y="72" width="1200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dsh" value="DSH 客户端宿主&#10;模块加载器 · React · 插槽&#10;会话投影 useSessions" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#e6f1eb;strokeColor=#79a68d;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="50" y="160" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="entry" value="插件装配入口&#10;src/entry.js&#10;注册主页面与侧栏" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#eaf1fa;strokeColor=#84a4ce;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="360" y="160" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="page" value="页面与画布生命周期&#10;src/ui/page.js&#10;use-tank-canvas.js" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#eaf1fa;strokeColor=#84a4ce;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="670" y="160" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="store" value="鱼缸业务与状态&#10;src/core/store.js&#10;state · motion · effects" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#fff2dc;strokeColor=#d0a75e;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="980" y="160" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="usage" value="宿主用量适配&#10;src/host/usage.js&#10;读取会话投影" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#e6f1eb;strokeColor=#79a68d;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="50" y="400" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ledger" value="用量账本&#10;src/core/ledger.js&#10;增量 → 鱼食与寻访" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#fff2dc;strokeColor=#d0a75e;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="360" y="400" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="scene" value="场景合成&#10;src/renderer/scene.js&#10;鱼群 · 植物 · 光效" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f3eaf7;strokeColor=#b393c3;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="980" y="400" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="assets" value="离线素材&#10;鱼类图集 · 水草&#10;背景与前景" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f5f3ec;strokeColor=#b8b09b;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="670" y="640" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="draw" value="绘制与降级&#10;WebGL 网格 → Canvas 2D&#10;失败时保留可用界面" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f3eaf7;strokeColor=#b393c3;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="980" y="640" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="dsh" target="entry">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="entry" target="page">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="page" target="store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="dsh" target="usage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="usage" target="ledger">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ledger" target="store">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="630" y="450" />
+              <mxPoint x="630" y="315" />
+              <mxPoint x="945" y="315" />
+              <mxPoint x="945" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="store" target="scene">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="scene" target="draw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="assets" target="draw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="当前为静态环境与图集鱼体的近似立体合成，尚无完整三维鱼体、独立骨骼和统一 PBR 光照。" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=14;fontColor=#5c645b;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="45" y="782" width="1210" height="32" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="storage" name="存储与账号边界">
+    <mxGraphModel dx="1500" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1360" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="鱼缸当前架构 · 存储与账号边界" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=26;fontColor=#163d31;fontFamily=Arial;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="45" y="24" width="1250" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="默认本机存储；账号用量与云服务仅在明确配置时启用" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=14;fontColor=#4b625b;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="45" y="72" width="1250" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ui" value="客户端页面&#10;快照 · UI 状态&#10;按页面生命周期同步" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#eaf1fa;strokeColor=#84a4ce;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="55" y="210" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="route" value="DSH Host 路由&#10;/fish-tank/state&#10;GET/HEAD/POST · 鉴权" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#e6f1eb;strokeColor=#79a68d;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="365" y="210" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="resolver" value="存储源选择&#10;account-source.js&#10;默认本机 / 可选账号" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#fff2dc;strokeColor=#d0a75e;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="675" y="210" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="file" value="Host JSON 文件&#10;DSH_HOME/fish-tank/tank.json&#10;临时文件替换" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#edf6ea;strokeColor=#8fb687;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="120" width="275" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cloud" value="可选账号服务&#10;账号用量 / 云存档&#10;需真实服务与配置" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f8f4ef;strokeColor=#beaa91;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="355" width="275" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cache" value="浏览器本地缓存&#10;localStorage&#10;dsh.fish-tank.v1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#edf6ea;strokeColor=#8fb687;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="55" y="450" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="identity" value="DSH 账号能力（可选）&#10;用户身份与 Host 凭据&#10;凭据不进入客户端" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f8f4ef;strokeColor=#beaa91;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="675" y="450" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=block;startFill=1;startSize=8;" edge="1" parent="1" source="ui" target="route">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="route" target="resolver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.25;entryX=0;entryY=0.5;" edge="1" parent="1" source="resolver" target="file">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="235" />
+              <mxPoint x="960" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=1;exitY=0.75;entryX=0;entryY=0.5;" edge="1" parent="1" source="resolver" target="cloud">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="285" />
+              <mxPoint x="980" y="405" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;startSize=8;" edge="1" parent="1" source="ui" target="cache">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#557568;strokeWidth=1.6;endArrow=block;endFill=1;endSize=8;fontSize=12;fontColor=#36594b;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="resolver" target="identity">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="本地缓存的写前比较不是原子操作；Host 单文件对象内排队不等于跨进程互斥。账号云服务默认未部署。" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=14;fontColor=#5c645b;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="45" y="650" width="1250" height="48" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

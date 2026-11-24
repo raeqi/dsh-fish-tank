@@ -1,10 +1,12 @@
 # 鱼缸
 
+开发者与 Agent 请从 [agent.md](agent.md) 和 [spec 规范索引](spec/README.md)开始。
+
 DSH 侧栏里的正面草缸：工作时积累自动鱼食，闲时看鱼巡游、培育后代、收集稀有来客，也能修剪和繁殖水草。
 
 ## 鱼缸与投喂
 
-- 正面 Canvas 视角，鱼种使用写实透明素材。鱼鳍保持静止，整体缓慢巡游、平滑转向、追食加速；竖向游动和转身都保持完整侧面轮廓。
+- 正面草缸视角，18 种鱼使用写实透明素材；鱼体和鳍缘随游动形变，鱼会巡游、转向和追食。优先使用 WebGL，无法使用时回退 Canvas 2D，并遵循系统减少动效设置。当前仍是图集驱动的近似体积效果，并非完整三维鱼体或 3A 画面。
 - 每 **10,000 新增 token = 1 粒自动鱼食**。包含缓存读取，按会话累计用量计算；初见某会话只记基线，不补发历史鱼食。
 - 点「投喂」撒 3 粒，点击水中撒 1 粒，手动投喂免费，不扣自动储备。吃饱的鱼忽略多余食物，鱼食会沉底。
 - 鱼饿时才动用自动储备，开着页面时每 5 秒最多撒 1 粒。饥饿约 24 小时到顶，饿到顶再持续 72 小时死亡；每粒食物降低 4% 饥饿并增加 4% 成长。
@@ -78,14 +80,14 @@ DSH 侧栏里的正面草缸：工作时积累自动鱼食，闲时看鱼巡游�
 ## 测试与素材
 
 ```sh
-node --test test/fish-store.test.mjs test/tank-file.test.mjs test/account-source.test.mjs
-DSH_CHECKOUT=/path/to/dsh-checkout node --test test/panel-flow.test.mjs
-node scripts/embed-fish-atlas.mjs
+npm ci
+npm run build
+npm test
 ```
 
-`fish-store` 无外部依赖，覆盖兑换、投喂、离线结算、繁殖、孵化、保底、收藏池、水草、存档迁移和绘制。`panel-flow` 使用 DSH checkout 的 jsdom、React 和 Testing Library；未提供依赖时会跳过。
+`client.js` 是 DSH 加载的生成产物；修改 `src/` 或 `assets/` 后执行 `npm run build`。`npm test` 会先构建，再运行模拟、存档、账号适配、渲染回归及页面测试；页面测试使用本地开发依赖，也可通过 `DSH_CHECKOUT` 指向 DSH 源码目录。这些测试不调用模型。
 
-`assets/` 保存常见鱼、稀有鱼和水草叶片 WebP，以及生成提示词。素材由内置 imagegen 生成，Client 内嵌相同图片，运行时不需要网络或资源路由。修改图片后运行 `node scripts/embed-fish-atlas.mjs` 同步内嵌数据。
+`assets/` 保存三组鱼图集、水草及鱼缸背景与前景，构建时内嵌到客户端，运行时无需联网或额外资源路由。`node scripts/embed-fish-atlas.mjs` 保留为构建兼容入口。架构和已知限制见 [架构说明](spec/architecture.md)，整体视觉目标及缺口见 [视觉路线](spec/visual-requirements.md)，本次合并后的检查见 [真实 DSH 验收记录](spec/acceptance.md)。
 
 ## 账号用量和跨端同步的实际范围
 

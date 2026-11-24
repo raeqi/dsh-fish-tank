@@ -474,24 +474,34 @@ test('a fish near the glass turns gradually and swims back into open water', () 
   assert.ok(store.getFish()[0].x < 0.9, 'returns to open water')
 })
 
-test('the photographic renderer uses the correct atlas cell for all twelve species', () => {
+test('all eighteen species retain their own atlas and cell in the photographic fallback', () => {
   let images = 0
   class LoadedImage {
     constructor() { images += 1 }
     set src(value) {
       assert.ok(value.startsWith('data:image/webp;base64,'), 'asset ships offline in the Client bundle')
+      this.value = value
       this.onload()
     }
   }
   const { tank: photographic } = loadBundle({ Image: LoadedImage })
-  for (let species = 0; species < 12; species += 1) {
+  const atlases = []
+  for (let species = 0; species < 18; species += 1) {
     const context = stubContext()
     photographic.drawFish(context, fish('photo', { species }), 800, 500, 10, 1, 1)
     const draw = context.calls.find(call => call[0] === 'drawImage')
     assert.ok(draw, 'draws a photographic fish')
-    assert.equal(draw[2], species % 3 * 512)
-    assert.equal(draw[3], Math.floor((species % 6) / 3) * 512)
+    const cell = species >= 12 ? species - 12 : species % 6
+    const columns = species >= 12 ? 4 : 3
+    const cellWidth = species >= 12 ? 1774 / 4 : 512
+    const cellHeight = species >= 12 ? 887 / 2 : 512
+    assert.equal(draw[2], (cell % columns) * cellWidth)
+    assert.equal(draw[3], Math.floor(cell / columns) * cellHeight)
+    const group = Math.floor(species / 6)
+    if (!atlases[group]) atlases[group] = draw[1]
+    assert.equal(draw[1], atlases[group], `species ${species} uses its atlas`)
   }
+  assert.equal(new Set(atlases).size, 3, 'common, rare and chapter fish use distinct atlases')
   assert.equal(images, 3, 'three fish atlases shared per page')
 })
 

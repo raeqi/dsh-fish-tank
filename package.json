@@ -17,10 +17,14 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
+    "AGENTS.md",
+    "agent.md",
     "assets/",
     "scripts/",
     "UPGRADING.md",
-    "account-source.js"
+    "account-source.js",
+    "src/",
+    "spec/"
   ],
   "dsh": {
     "bundle": {
@@ -36,7 +40,17 @@
     }
   },
   "scripts": {
-    "test": "node --test test/fish-store.test.mjs test/tank-file.test.mjs test/account-source.test.mjs",
-    "assets:embed": "node scripts/embed-fish-atlas.mjs"
+    "build": "node scripts/build-client.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "test:core": "npm run build && node --test test/fish-store.test.mjs test/regressions.test.mjs test/tank-file.test.mjs test/account-source.test.mjs",
+    "test:ui": "npm run build && node --test test/panel-flow.test.mjs",
+    "assets:embed": "npm run build"
+  },
+  "devDependencies": {
+    "@testing-library/react": "16.3.0",
+    "esbuild": "0.28.2",
+    "jsdom": "26.1.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }
