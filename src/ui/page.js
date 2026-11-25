@@ -487,7 +487,6 @@ export function createPage(React, DshFishTank) {
           h('div', { className: 'dsw-fish-inner' },
             h('header', { className: 'dsw-fish-heading' },
               h('div', { className: 'dsw-fish-heading-text' },
-                h('p', { className: 'dsw-fish-eyebrow' }, t('ui.eyebrow')),
                 h('h1', null, t('title')),
                 h('p', { className: 'dsw-fish-subtitle' }, t('subtitle', { per: formatCount(DshFishTank.TOKENS_PER_PELLET) }))),
               h('button', {
@@ -504,7 +503,6 @@ export function createPage(React, DshFishTank) {
                 role: 'img',
                 'aria-label': t('aria.tank', { count: stats.fish }),
               }),
-              h('span', { className: 'dsw-fish-tank-label', 'aria-hidden': true }, t('ui.tankLabel')),
               showHint && stats.fish > 0
                 && h('span', { className: 'dsw-fish-caption' }, t('tank.caption')),
               stats.fish === 0 && h('div', { className: 'dsw-fish-empty' },
