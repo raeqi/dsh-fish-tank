@@ -1,6 +1,4 @@
-import { cinematicStyle } from './cinematic-style.js'
-
-var upstreamStyle = [
+export const STYLE = [
       '.dsw-fish-page{display:flex;flex-direction:column;height:100%;min-height:0;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-family:inherit;font-size:14px;line-height:1.6}',
       '.dsw-fish-inner{display:flex;flex:1;flex-direction:column;gap:12px;width:100%;max-width:1440px;min-height:0;margin:0 auto;padding:20px clamp(20px,3vw,40px) 20px;box-sizing:border-box}',
       '.dsw-fish-heading{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:16px}',
@@ -13,6 +11,7 @@ var upstreamStyle = [
       '.dsw-fish-feed:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}',
       '.dsw-fish-feed:disabled{opacity:.4;cursor:not-allowed}',
       '.dsw-fish-tank{position:relative;flex:none;height:clamp(400px,calc(100vh - 238px),780px);min-height:400px;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:4px;background:#182f27;box-shadow:inset 0 0 0 4px rgba(205,230,215,.1),inset 0 -40px 70px rgba(3,26,18,.25),0 18px 44px rgba(2,16,12,.2);cursor:crosshair}',
+      ".dsw-fish-tank::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 1px 2px rgba(255,255,255,.24),inset 0 0 45px rgba(2,17,15,.33)}",
       '.dsw-fish-canvas{display:block;width:100%;height:100%}',
       '.dsw-fish-caption{position:absolute;z-index:3;left:50%;bottom:12px;max-width:calc(100% - 24px);padding:4px 12px;overflow:hidden;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(8,31,47,.46);color:#eaf6fb;font-size:12px;line-height:18px;white-space:nowrap;text-overflow:ellipsis;pointer-events:none;transform:translateX(-50%);backdrop-filter:blur(6px)}',
       '.dsw-fish-empty{position:absolute;z-index:3;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;box-sizing:border-box;text-align:center;background:rgba(8,31,47,.58);color:#eaf6fb}',
@@ -102,5 +101,3 @@ var upstreamStyle = [
       '[data-platform=\'darwin\'] .dsw-fish-inner{padding-top:calc(28px + var(--dsh-frame-top-clearance, 0px))}',
       '@media (max-width:720px){.dsw-fish-inner{padding:20px 20px 16px;gap:14px}}',
     ].join('\n')
-
-export const STYLE = upstreamStyle + '\n' + cinematicStyle
