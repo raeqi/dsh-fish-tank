@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-fish-tank",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "type": "module",
   "description": "A token-fed planted aquarium with parent bonding, a nursery, rare river visitors, a fish journal, a sanctuary, and propagating plants.",

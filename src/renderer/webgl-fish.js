@@ -26,11 +26,16 @@ void main() {
   float u = aUv.x;
   float v = aUv.y;
   float tail = pow(1.0-u, 2.0);
-  float fins = pow(abs(v-.5)*2.0, 2.0)*(1.0-u*.45);
+  // Fins occupy the outer bands of the sprite, not the very edge rows: a
+  // smoothstep keeps the body steady and lets the membranes travel.
+  float fins = smoothstep(0.2, 0.5, abs(v-0.5))*(1.0-u*.4);
   float beat = sin(uPhase-(1.0-u)*4.2);
-  float flutter = sin(uPhase*1.5+u*5.0);
-  float x = (u-.52)*uSize.x;
-  float y = (v-.5 + beat*tail*uTail + flutter*fins*uFin)*uSize.y;
+  float flutter = sin(uPhase*1.6+u*5.0+v*2.4);
+  // The flare opens and closes the fin pair around the body midline.
+  float flare = sin(uPhase*1.05+v*4.0);
+  float lift = sign(v-0.5)*fins*uFin*.8*flare;
+  float x = (u-.52)*uSize.x + beat*tail*uSize.x*.05 + flutter*fins*uSize.x*uFin*.45;
+  float y = (v-.5 + beat*tail*uTail + flutter*fins*uFin + lift)*uSize.y;
   vec2 p = (aUv-uBody.xy)/uBody.zw;
   float body = max(0.0, 1.0-dot(p,p));
   float z = uSide * sqrt(body) * uVolume * uSize.x + beat*tail*uSize.x*.13;

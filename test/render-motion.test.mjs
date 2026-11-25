@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import vm from 'node:vm'
 import { advanceVisualYaw, bodyEnvelope } from '../src/renderer/fish-volume.js'
+import { FISH_SPECIES } from '../src/shared/species.js'
 
 const source = readFileSync(new URL('../client.js', import.meta.url), 'utf8')
 function load(extra = {}) {
@@ -92,4 +93,20 @@ test('the scene renders a moving Canvas fallback when WebGL is unavailable', () 
   assert.ok(c.calls.length >= 20, 'fish strips are rendered')
   tank.drawScene(c.context, { width: 800, height: 500, dpr: 1 }, { fish: [sampleFish], pellets: [], bubbles: [], ripples: [], splashes: [], ghosts: [], sparkles: [] }, 2016)
   assert.equal(requests, 1, 'unsupported WebGL is not retried every frame')
+})
+
+test('long-finned species carry visible fin motion', () => {
+  assert.ok(FISH_SPECIES[0].motion.fin >= .05, 'betta fins travel')
+  assert.ok(FISH_SPECIES[2].motion.fin >= .05, 'angelfish fins travel')
+  assert.ok(FISH_SPECIES[0].motion.fin > FISH_SPECIES[3].motion.fin, 'long fins beat more than tetra fins')
+})
+
+test('the fallback sway moves trailing slices sideways', () => {
+  const tank = load(), first = canvas(), next = canvas()
+  tank.drawFish(first.context, sampleFish, 800, 500, 0, 1, 1)
+  tank.drawFish(next.context, sampleFish, 800, 500, .4, 1, 1)
+  const tailShift = Math.abs(first.calls[0][5] - next.calls[0][5])
+  const headShift = Math.abs(first.calls[19][5] - next.calls[19][5])
+  assert.ok(tailShift > headShift, 'the tail end drifts more than the head')
+  assert.ok(tailShift > .2, 'the drift is visible at tank scale')
 })

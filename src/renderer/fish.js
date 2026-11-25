@@ -517,8 +517,11 @@ import { fishPose, tailOffset } from './fish-pose.js'
       var u = (i + .5) / slices
       var sw = frame[2] / slices
       var y = tailOffset(u, .5, pose) * pose.tall
+      // The fallback has no fin mask, so the trailing slices also drift
+      // sideways; that keeps the tail and rear fin edges in motion.
+      var sway = reducedMotion ? 0 : Math.sin(pose.phase * 1.6 + u * 5) * pose.motion.fin * pose.tall * (1 - u)
       context.drawImage(fishAtlas, frame[0] + i * sw, frame[1], Math.min(sw + .75, frame[2] - i * sw), frame[3],
-        -pose.length * .52 + i * pose.length / slices, -pose.tall * .5 + y,
+        -pose.length * .52 + i * pose.length / slices + sway, -pose.tall * .5 + y,
         pose.length / slices + .5, pose.tall)
     }
     context.restore()

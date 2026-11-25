@@ -153,24 +153,24 @@ var DshFishTank = (() => {
     FISH_SPECIES.push(Object.assign({}, FISH_SPECIES[5], { id: info.key }));
   });
   var visualProfiles = [
-    [1.1, 0.9, 2.2, 0.045, 0.016],
-    [0.9, 0.9, 4.1, 0.05, 0.012],
-    [1.15, 0.7, 2, 0.035, 0.016],
-    [0.62, 1.2, 5.4, 0.045, 0.01],
-    [1.25, 0.7, 2.25, 0.028, 0.012],
-    [0.86, 0.9, 3.4, 0.04, 0.012],
-    [1.05, 0.9, 3.1, 0.04, 0.012],
-    [0.95, 0.9, 3.1, 0.04, 0.012],
-    [1.15, 0.8, 2.8, 0.04, 0.012],
-    [1.7, 0.7, 2.2, 0.035, 0.011],
-    [1.25, 0.7, 2.25, 0.028, 0.012],
-    [1.15, 0.7, 2, 0.035, 0.016],
-    [1.45, 0.8, 2.7, 0.04, 0.012],
-    [1.65, 0.75, 2.6, 0.05, 0.012],
-    [0.8, 1.1, 4.4, 0.045, 0.01],
-    [0.65, 1.2, 5, 0.045, 0.01],
-    [1.1, 1, 3.6, 0.04, 0.012],
-    [0.85, 0.8, 3, 0.04, 0.012]
+    [1.1, 0.9, 2.2, 0.05, 0.06],
+    [0.9, 0.9, 4.1, 0.05, 0.045],
+    [1.15, 0.7, 2, 0.04, 0.065],
+    [0.62, 1.2, 5.4, 0.045, 0.035],
+    [1.25, 0.7, 2.25, 0.03, 0.055],
+    [0.86, 0.9, 3.4, 0.04, 0.045],
+    [1.05, 0.9, 3.1, 0.04, 0.045],
+    [0.95, 0.9, 3.1, 0.04, 0.04],
+    [1.15, 0.8, 2.8, 0.04, 0.045],
+    [1.7, 0.7, 2.2, 0.035, 0.04],
+    [1.25, 0.7, 2.25, 0.03, 0.05],
+    [1.15, 0.7, 2, 0.04, 0.06],
+    [1.45, 0.8, 2.7, 0.04, 0.05],
+    [1.65, 0.75, 2.6, 0.05, 0.04],
+    [0.8, 1.1, 4.4, 0.045, 0.04],
+    [0.65, 1.2, 5, 0.045, 0.04],
+    [1.1, 1, 3.6, 0.04, 0.045],
+    [0.85, 0.8, 3, 0.04, 0.04]
   ];
   FISH_SPECIES.forEach((species, index) => {
     const [atlasScale, swimSpeed, frequency, tail, fin] = visualProfiles[index];
@@ -1835,13 +1835,14 @@ var DshFishTank = (() => {
       var u = (i + 0.5) / slices;
       var sw = frame[2] / slices;
       var y = tailOffset(u, 0.5, pose) * pose.tall;
+      var sway = reducedMotion ? 0 : Math.sin(pose.phase * 1.6 + u * 5) * pose.motion.fin * pose.tall * (1 - u);
       context.drawImage(
         fishAtlas,
         frame[0] + i * sw,
         frame[1],
         Math.min(sw + 0.75, frame[2] - i * sw),
         frame[3],
-        -pose.length * 0.52 + i * pose.length / slices,
+        -pose.length * 0.52 + i * pose.length / slices + sway,
         -pose.tall * 0.5 + y,
         pose.length / slices + 0.5,
         pose.tall
@@ -1958,11 +1959,16 @@ void main() {
   float u = aUv.x;
   float v = aUv.y;
   float tail = pow(1.0-u, 2.0);
-  float fins = pow(abs(v-.5)*2.0, 2.0)*(1.0-u*.45);
+  // Fins occupy the outer bands of the sprite, not the very edge rows: a
+  // smoothstep keeps the body steady and lets the membranes travel.
+  float fins = smoothstep(0.2, 0.5, abs(v-0.5))*(1.0-u*.4);
   float beat = sin(uPhase-(1.0-u)*4.2);
-  float flutter = sin(uPhase*1.5+u*5.0);
-  float x = (u-.52)*uSize.x;
-  float y = (v-.5 + beat*tail*uTail + flutter*fins*uFin)*uSize.y;
+  float flutter = sin(uPhase*1.6+u*5.0+v*2.4);
+  // The flare opens and closes the fin pair around the body midline.
+  float flare = sin(uPhase*1.05+v*4.0);
+  float lift = sign(v-0.5)*fins*uFin*.8*flare;
+  float x = (u-.52)*uSize.x + beat*tail*uSize.x*.05 + flutter*fins*uSize.x*uFin*.45;
+  float y = (v-.5 + beat*tail*uTail + flutter*fins*uFin + lift)*uSize.y;
   vec2 p = (aUv-uBody.xy)/uBody.zw;
   float body = max(0.0, 1.0-dot(p,p));
   float z = uSide * sqrt(body) * uVolume * uSize.x + beat*tail*uSize.x*.13;
