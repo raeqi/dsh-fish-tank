@@ -208,6 +208,12 @@ cleanup()
   assert.match(shell[0][1], /background:var\(--dsw-alias-bg-base\)/)
   assert.match(shell[0][1], /color:var\(--dsw-alias-label-primary\)/)
   assert.match(css, /\.dsw-fish-feed\{[^}]*background:var\(--dsw-alias-button-primary-fill\)/)
+  assert.match(css, /\.dsw-fish-tank\{[^}]*border:1px solid var\(--fish-panel-line\);border-radius:19px/)
+  for (const selector of ['game-card', 'collection', 'species', 'resident-group', 'game-rules']) {
+    const rules = [...css.matchAll(new RegExp('\\.dsw-fish-' + selector + '\\{([^}]+)\\}', 'g'))]
+    assert.ok(rules.some(([, value]) => value.includes('border:1px solid var(--fish-panel-line)')), selector + ' keeps its themed outline')
+    assert.ok(rules.every(([, value]) => !/(^|;)border:0(?:;|$)/.test(value)), selector + ' outline survives narrow viewports')
+  }
   assert.match(css, /\.dsw-fish-tank::after\{[^}]*pointer-events:none/, 'glass overlay does not intercept feeding')
   assert.equal(view.container.querySelector('.dsw-fish-eyebrow, .dsw-fish-tank-label'), null)
   assert.ok(screen.getByText('0 auto reserve'))
