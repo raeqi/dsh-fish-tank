@@ -222,13 +222,13 @@ cleanup()
   assert.ok(screen.getByText('Click the water to drop food too'))
   assert.ok(screen.getByText('Auto-fed 0 · hand-fed 0'))
 
-  sessionState = sessionsWith(170000)
+  sessionState = sessionsWith(220000)
   act(() => {
     view.rerender(React.createElement(page.component, { t, useSessions }))
   })
   flushFrames()
   assert.ok(screen.getByText('5 auto reserve'))
-  assert.ok(screen.getByText(/50,000 tokens since the tank started/))
+  assert.ok(screen.getByText(/100,000 tokens since the tank started/))
   assert.equal(screen.getByRole('button', { name: 'Feed' }).disabled, false)
   assert.ok(screen.getByText('Click the water to drop food too'))
 
@@ -250,13 +250,13 @@ cleanup()
 }
 
 {
-  sessionState = sessionsWith(170000)
+  sessionState = sessionsWith(220000)
   const { t, page } = install()
   const view = mount(page, t)
   flushFrames()
   assert.ok(screen.getByText('5 auto reserve'), 'the reserve survives a reopen')
   assert.ok(screen.getByText('Auto-fed 0 · hand-fed 4'), 'the hand-fed count survives a reopen')
-  assert.ok(screen.getByText(/50,000 tokens since the tank started/))
+  assert.ok(screen.getByText(/100,000 tokens since the tank started/))
   cleanup()
 }
 
@@ -268,7 +268,7 @@ cleanup()
   flushFrames()
   assert.ok(screen.getByRole('heading', { name: '鱼缸' }))
   assert.ok(screen.getByRole('button', { name: '投喂' }))
-  assert.ok(screen.getByText(/每 10,000 token 攒 1 粒鱼食/))
+  assert.ok(screen.getByText(/每 20,000 token 攒 1 粒鱼食/))
   assert.ok(screen.getByText('0 粒自动储备'))
   assert.ok(screen.getByText('自动投喂 0 粒 · 手动投喂 0 粒'))
   cleanup()

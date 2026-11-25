@@ -1,10 +1,10 @@
 import { clamp, isNumber } from '../shared/math.js'
 import { FISH_HUES, FISH_SPECIES, SPECIES_INFO } from '../shared/species.js'
 import { defaultStorage, readState, freshState, storedState, createId, newFish, publicFish } from './state.js'
-import { absorbTokens as applyTokens } from './ledger.js'
+import { absorbTokens as applyTokens, creditRewards } from './ledger.js'
 import { stepMotion } from './motion.js'
 import { stepEffects } from './effects.js'
-import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, MAX_PELLETS, TOKENS_PER_PELLET, EAT_HUNGER, GROWTH_PER_PELLET, BIRTH_PELLETS, BIRTH_COOLDOWN_MS, MANUAL_FEED, AUTO_FEED_GAP_MS, HUNGRY, HUNGER_RATE, STARVE_MS, AWAY_CAP_SECONDS, AWAY_STEP_SECONDS, JOURNEY_TOKENS, HATCH_MS } from './config.js'
+import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, MAX_PELLETS, EAT_HUNGER, GROWTH_PER_PELLET, BIRTH_PELLETS, BIRTH_COOLDOWN_MS, MANUAL_FEED, AUTO_FEED_GAP_MS, HUNGRY, HUNGER_RATE, STARVE_MS, AWAY_CAP_SECONDS, AWAY_STEP_SECONDS, HATCH_MS, COLLECTION_GUARANTEE, HABITAT_LEVELS } from './config.js'
 
   export function createStore(options) {
     var settings = options || {}
@@ -24,7 +24,9 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
     function tankSpace() {
       var expansions = Math.max(state.game.unlockedExpansions, Math.floor(state.tokensCounted / EXPANSION_TOKENS))
       state.game.unlockedExpansions = expansions
-      return { level: expansions + 1, expansions: expansions, space: BASE_SPACE + expansions * 4,
+      var level = expansions + 1
+      return { level: level, habitatTier: Math.floor(level / HABITAT_LEVELS), nextHabitatLevel: (Math.floor(level / HABITAT_LEVELS) + 1) * HABITAT_LEVELS,
+        expansions: expansions, space: BASE_SPACE + expansions * 4,
         progress: state.tokensCounted % EXPANSION_TOKENS / EXPANSION_TOKENS,
         nextTokens: EXPANSION_TOKENS - state.tokensCounted % EXPANSION_TOKENS }
     }
@@ -94,15 +96,7 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
       tankSpace()
       state.accountMeter = { id: id, total: prior ? Math.max(prior.total, total) : total }
       state.tokensCounted = state.accountMeter.total
-      if (delta > 0) {
-        var budget = state.tokenRemainder + delta
-        var pellets = Math.floor(budget / TOKENS_PER_PELLET)
-        state.reserve += pellets
-        state.tokenRemainder = budget % TOKENS_PER_PELLET
-        var exploration = state.game.journeyProgress + delta
-        state.game.tickets += Math.floor(exploration / JOURNEY_TOKENS)
-        state.game.journeyProgress = exploration % JOURNEY_TOKENS
-      }
+      if (delta > 0) creditRewards(state, delta)
       return true
     }
 
@@ -254,20 +248,28 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
       state.game.garden.growth = clamp(state.game.garden.growth + seconds / 86400 * 0.18, 0, 1)
     }
 
-    /** A visit spends an earned ticket only when the new fish can be accommodated. */
+    function visitorSpecies() {
+      var roll = random()
+      var rarity = roll < 0.03 ? 2 : roll < 0.25 || state.game.visitPity >= 9 ? 1 : 0
+      var firstCollection = state.game.chapter === 1
+      var all = SPECIES_INFO.map(function (_, index) { return index })
+      var candidates = all.filter(function (index) {
+        return SPECIES_INFO[index].rarity === rarity && (firstCollection ? index < 12 : rarity === 2 ? index >= 9 && index < 12 : index >= 12)
+      })
+      var missing = candidates.filter(function (index) { return state.game.discovered.indexOf(index) < 0 })
+      if (firstCollection && missing.length === 0 && state.game.collectionMisses >= COLLECTION_GUARANTEE - 1) {
+        missing = all.filter(function (index) { return index < 12 && state.game.discovered.indexOf(index) < 0 })
+      }
+      var pool = missing.length ? missing : candidates
+      return pool[Math.floor(random() * pool.length)]
+    }
+
+    /** An earned ticket invites a fish; the tank does not impose a population cap. */
     function welcomeVisitor() {
       if (!ready || state.game.tickets < 1) return false
-      var roll = random()
-      var species
-      if (roll < 0.03) species = 9 + Math.floor(random() * 3)
-      else if (roll < 0.25 || state.game.visitPity >= 9) species = 6 + Math.floor(random() * 3)
-      else species = Math.floor(random() * 6)
-      if (state.game.chapter >= 2 && species < 9) {
-        var rarity = SPECIES_INFO[species].rarity
-        var candidates = SPECIES_INFO.map(function (_, index) { return index }).filter(function (index) { return index >= 12 && SPECIES_INFO[index].rarity === rarity })
-        var missing = candidates.filter(function (index) { return state.game.discovered.indexOf(index) < 0 })
-        var pool = missing.length ? missing : candidates
-        species = pool[Math.floor(random() * pool.length)]
+      var species = visitorSpecies()
+      if (state.game.chapter === 1) {
+        state.game.collectionMisses = state.game.discovered.indexOf(species) < 0 ? 0 : state.game.collectionMisses + 1
       }
       var visitor = newFish(random, { species: species, growth: 0.35 + random() * 0.3, hunger: 0.3, origin: 'visitor', generation: 0 })
       state.game.tickets -= 1
@@ -332,16 +334,16 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
         cooldown: state.lastBirthAt > 0 ? Math.max(0, BIRTH_COOLDOWN_MS - (stamp - state.lastBirthAt)) : 0,
         nursery: egg ? { remaining: Math.max(0, egg.readyAt - stamp), progress: clamp((stamp - egg.createdAt) / Math.max(1, egg.readyAt - egg.createdAt), 0, 1), waiting: false, care: egg.care } : null,
         journeyProgress: state.game.journeyProgress, tickets: state.game.tickets,
-        visitPity: state.game.visitPity, breedPity: state.game.breedPity,
+        visitPity: state.game.visitPity, collectionMisses: state.game.collectionMisses, breedPity: state.game.breedPity,
         discovered: state.game.discovered.slice(), archive: state.game.archive.map(publicFish), residents: state.fish.map(publicFish),
         garden: Object.assign({}, state.game.garden), journal: state.game.journal.slice(-4).reverse(),
         births: state.game.births, visits: state.game.visits,
       }
     }
 
-    function eatFish(fish, nowMs) {
-      fish.hunger = clamp(fish.hunger - EAT_HUNGER, 0, 1)
-      fish.growth = clamp(fish.growth + GROWTH_PER_PELLET, 0, 1)
+    function eatFish(fish, nowMs, legacyMeal) {
+      fish.hunger = clamp(fish.hunger - (legacyMeal ? 0.04 : EAT_HUNGER), 0, 1)
+      fish.growth = clamp(fish.growth + (legacyMeal ? 0.04 : GROWTH_PER_PELLET), 0, 1)
       fish.starvingSince = null
       fish.biteAt = nowMs
       state.game.garden.growth = clamp(state.game.garden.growth + 0.002, 0, 1)
@@ -372,7 +374,7 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
      * Resolve a span without animation: hunger, reserve feeding, growth, births,
      * and starvation. Used for the time the page was closed or suspended.
      */
-    function simulateSpan(seconds, nowMs) {
+    function simulateSpan(seconds, nowMs, legacyMeal) {
       var remaining = seconds
       var simNow = nowMs - seconds * 1000
       while (remaining > 0) {
@@ -385,7 +387,7 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
           if (state.reserve >= 1 && state.fish[fed].hunger >= HUNGRY) {
             state.reserve -= 1
             state.autoFed += 1
-            eatFish(state.fish[fed], simNow)
+            eatFish(state.fish[fed], simNow, legacyMeal)
           }
         }
         checkDeaths(simNow)
@@ -407,7 +409,9 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
       var elapsed = state._fresh ? 0 : clamp((stamp - state.updatedAt) / 1000, 0, AWAY_CAP_SECONDS)
       state._fresh = false
       state.lastStepAt = stamp
-      simulateSpan(elapsed, stamp)
+      // Time before the upgrade is settled at the saved version's feeding pace.
+      simulateSpan(elapsed, stamp, !state.game.feedingBalance)
+      state.game.feedingBalance = true
       hatch(stamp)
       checkProgress(stamp)
     }
@@ -437,15 +441,19 @@ import { STORAGE_KEY, BACKUP_KEY, STATE_VERSION, BASE_SPACE, EXPANSION_TOKENS, M
         }
       }
 
-      if (state.reserve >= 1 && state.pellets.length === 0 && stamp - lastAutoFeedAt >= AUTO_FEED_GAP_MS) {
-        var hungryFish = false
-        for (var search = 0; search < state.fish.length; search += 1) {
-          if (state.fish[search].hunger >= HUNGRY) { hungryFish = true; break }
+      if (state.reserve >= 1 && state.pellets.length < MAX_PELLETS && stamp - lastAutoFeedAt >= AUTO_FEED_GAP_MS) {
+        var hungryCount = 0
+        for (var index = 0; index < state.fish.length; index += 1) {
+          if (state.fish[index].hunger >= HUNGRY) hungryCount += 1
         }
-        if (hungryFish) {
-          state.reserve -= 1
-          state.autoFed += 1
-          releasePellet(0.18 + random() * 0.64, 0.05)
+        // Small tanks get one pellet at a time. Larger schools can share a
+        // handful without waiting for every pellet to sink before the next.
+        var targetPellets = Math.min(4, Math.ceil(hungryCount / 8))
+        var count = Math.min(state.reserve, Math.max(0, targetPellets - state.pellets.length))
+        if (count > 0) {
+          state.reserve -= count
+          state.autoFed += count
+          for (var pellet = 0; pellet < count; pellet += 1) releasePellet(0.18 + random() * 0.64, 0.05)
           lastAutoFeedAt = stamp
         }
       }

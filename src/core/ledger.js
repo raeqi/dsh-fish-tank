@@ -20,13 +20,18 @@ import { TOKENS_PER_PELLET, JOURNEY_TOKENS } from './config.js'
           state.tokenSeen[entry.id] = entry.total
         }
       }
+      state.tokensCounted += delta
+      return { pellets: creditRewards(state, delta), tokens: delta }
+    }
+
+    /** The session and account ledgers follow the same rates, preserving saved remainders. */
+    export function creditRewards(state, delta) {
       var pelletBudget = state.tokenRemainder + delta
       var pellets = Math.floor(pelletBudget / TOKENS_PER_PELLET)
-      state.tokenRemainder = pelletBudget - pellets * TOKENS_PER_PELLET
+      state.tokenRemainder = pelletBudget % TOKENS_PER_PELLET
       state.reserve += pellets
-      state.tokensCounted += delta
       var exploration = state.game.journeyProgress + delta
       state.game.tickets += Math.floor(exploration / JOURNEY_TOKENS)
       state.game.journeyProgress = exploration % JOURNEY_TOKENS
-      return { pellets: pellets, tokens: delta }
+      return pellets
     }

@@ -257,7 +257,7 @@ export function createPage(React, DshFishTank) {
         }, [])
 
         React.useEffect(function () {
-          var previousLevel = store.summary().tank.level
+          var previousStats = store.summary()
           var added = store.absorbTokens(tokenEntries(sessions))
           syncedRef.current = true
           if (!store.isReady()) {
@@ -266,10 +266,11 @@ export function createPage(React, DshFishTank) {
             finishCatchUp()
             return
           }
-          if (added.pellets > 0) {
-            persist()
+          if (added.tokens > 0) {
+            var nextStats = store.summary()
+            var expanded = nextStats.tank.level - previousStats.tank.level
+            if (added.pellets > 0 || expanded > 0 || nextStats.game.tickets > previousStats.game.tickets) persist()
             publish(false)
-            var expanded = store.summary().tank.level - previousLevel
             if (expanded > 0) setNotice(function (previous) { return Object.assign({}, previous, { expanded: expanded }) })
           }
         }, [sessions, remote.ready])
@@ -407,7 +408,7 @@ export function createPage(React, DshFishTank) {
             game.nursery ? t('game.nurseryCare', { count: game.nursery.care }) : t('game.parentHint', { count: game.breedPity }),
             h('span', { className: 'dsw-fish-game-small' }, t('game.habitatBonus', { percent: (garden.patches - 3) * 4 }))),
           gameCard(t('game.journey'), t('game.tickets', { count: game.tickets }), game.journeyProgress / DshFishTank.JOURNEY_TOKENS,
-            t('game.journeyHint', { tokens: formatCount(DshFishTank.JOURNEY_TOKENS - game.journeyProgress), count: game.visitPity }),
+            t(game.chapter === 1 ? 'game.collectionJourneyHint' : 'game.journeyHint', { tokens: formatCount(DshFishTank.JOURNEY_TOKENS - game.journeyProgress), count: game.chapter === 1 ? game.collectionMisses : game.visitPity }),
             h('button', { type: 'button', className: 'dsw-fish-small-button', disabled: game.tickets < 1, onClick: function () { gameAction(store.welcomeVisitor) } }, t('game.welcome')), true),
           gameCard(t('game.garden'), t('game.plants', { count: garden.patches, cuttings: garden.cuttings }), garden.growth,
             t('game.gardenHint', { percent: Math.round(garden.growth * 100) }),
@@ -526,7 +527,8 @@ export function createPage(React, DshFishTank) {
             saveFailed && h('p', { className: 'dsw-fish-error', role: 'alert' }, t('error.save')),
             h('div', { className: 'dsw-fish-stats' },
               h('span', null, t('stats.fish', { count: stats.fish })),
-              h('span', { title: t('stats.expansionHint', { tokens: formatCount(stats.tank.nextTokens) }) }, t('stats.tankLevel', { level: stats.tank.level })),
+              h('span', { title: t('stats.expansionHint', { tokens: formatCount(stats.tank.nextTokens), level: stats.tank.nextHabitatLevel }) }, t('stats.tankLevel', { level: stats.tank.level })),
+              stats.tank.habitatTier > 0 && h('span', null, t('stats.habitat', { tier: stats.tank.habitatTier })),
               h('span', { className: 'dsw-fish-dot', 'aria-hidden': true }, '·'),
               h('span', null, t('stats.reserve', { count: stats.reserve })),
               h('span', { className: 'dsw-fish-dot', 'aria-hidden': true }, '·'),

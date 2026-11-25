@@ -7,7 +7,7 @@
 1. **DSH 宿主**加载插件并提供客户端模块加载器、React、侧栏/主页面插槽、语言包与会话投影；Host 的 Web 服务提供受认证保护的路由。
 2. **客户端入口** `src/entry.js` 组合依赖并注册页面。`src/ui/page.js` 负责交互、状态发布和 Host 同步，`src/ui/use-tank-canvas.js` 管理画布、帧循环、尺寸、减少动效与释放；`src/host/usage.js` 将 DSH 会话投影转换为用量条目。
 3. **鱼缸模拟**位于客户端 `src/core/`：`store.js` 编排生命周期、游戏与存档，`state.js` 读取/校验状态，`ledger.js` 计算用量奖励，`motion.js` 与 `effects.js` 更新运动和瞬态效果。`src/shared/` 维护数值工具和稳定鱼种索引。当前 `store.js` 仍承担多个领域职责，`state.js` 的默认存储读取仍触及浏览器全局，解耦尚可继续完善。
-4. **渲染**由 `src/renderer/scene.js` 组合背景、灯光、植物、鱼群、粒子与玻璃。三组鱼图集和其他素材由构建内嵌；优先 WebGL 图集网格，失败时回退 Canvas 2D 图集切片，素材不可用时回退程序绘制。鱼超过 32 条时降低网格密度，不删除数据。减少动效固定视觉运动并降低绘制频率，模拟仍按页面生命周期执行。
+4. **渲染**由 `src/renderer/scene.js` 组合背景、灯光、植物、鱼群、粒子与玻璃。每 50 水域等级切换一次造景：`core/store.js` 推导造景档位，`renderer/habitat.js` 仅在档位变化时重绘一个静态层，作为鱼群背后的装饰。三组鱼图集和其他素材由构建内嵌；优先 WebGL 图集网格，失败时回退 Canvas 2D 图集切片，素材不可用时回退程序绘制。鱼超过 32 条时降低网格密度，不删除数据。减少动效固定视觉运动并降低绘制频率，模拟仍按页面生命周期执行。
 5. **Host 端** `index.js` 在 `/fish-tank/state` 上提供 GET/HEAD/POST，默认把 JSON 文件存至 `DSH_HOME/fish-tank/tank.json`，也可配置绝对路径。`account-source.js` 是可选账号用量与云存储适配层；默认没有可用账号总用量接口或已部署云存档。
 
 `client.js` 是由 `src/` 与素材生成的自包含 DSH 入口，运行时不请求远程图片或 npm 包；不要直接修改生成物。`npm run build` 生成它，`npm test` 构建并运行功能、回归和页面测试。

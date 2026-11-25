@@ -29,7 +29,7 @@
         <mxCell id="ledger" value="用量账本&#10;src/core/ledger.js&#10;增量 → 鱼食与寻访" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#fff2dc;strokeColor=#d0a75e;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
           <mxGeometry x="360" y="400" width="230" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="scene" value="场景合成&#10;src/renderer/scene.js&#10;鱼群 · 植物 · 光效" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f3eaf7;strokeColor=#b393c3;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
+        <mxCell id="scene" value="场景合成&#10;src/renderer/scene.js&#10;鱼群 · 植物 · 造景 · 光效" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f3eaf7;strokeColor=#b393c3;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">
           <mxGeometry x="980" y="400" width="250" height="100" as="geometry" />
         </mxCell>
         <mxCell id="assets" value="离线素材&#10;鱼类图集 · 水草&#10;背景与前景" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=10;strokeWidth=1.5;fillColor=#f5f3ec;strokeColor=#b8b09b;fontColor=#1b3029;fontSize=15;fontFamily=Arial;" vertex="1" parent="1">

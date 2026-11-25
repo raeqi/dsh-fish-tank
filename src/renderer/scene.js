@@ -1,6 +1,7 @@
 import { drawFish } from './fish.js'
 import { drawWebGLFish, disposeWebGLFish } from './webgl-fish.js'
 import { drawBackdrop } from './background.js'
+import { drawHabitat } from './habitat.js'
 import { drawForeground } from './foreground.js'
 import { drawWaterLight, drawWaterParticles, drawLensFinish } from './atmosphere.js'
 import { drawCaustics, drawBackgroundPlants, drawFloor, drawHardscape, drawPlantBed } from './scenery.js'
@@ -26,9 +27,10 @@ export function drawScene(context, view, scene, timeMs) {
     drawHardscape(context, width, height, scale)
     drawPlantBed(context, width, height, time, scale, false)
   }
+  drawHabitat(context, width, height, scene.tank?.habitatTier)
   drawWaterLight(context, width, height, time, view.reducedMotion)
   drawWaterParticles(context, width, height, time, view.reducedMotion)
-  const zoom = scene.tank ? Math.sqrt(Math.max(1, Math.min(1 + scene.tank.expansions * .12, scene.fish.length / 8))) : 1
+  const zoom = scene.tank ? Math.sqrt(Math.max(1, Math.min(16, Math.max(1 + scene.tank.expansions * .12, scene.fish.length / 16), scene.fish.length / 8))) : 1
   const fishScale = scale / zoom
   drawFishShadows(context, scene, width, height, fishScale)
   drawGhosts(context, scene, width, height, time, fishScale)

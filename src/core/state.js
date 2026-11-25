@@ -1,6 +1,6 @@
 import { clamp, isNumber } from '../shared/math.js'
 import { FISH_HUES, FISH_SPECIES, SPECIES_INFO } from '../shared/species.js'
-import { STORAGE_KEY, STATE_VERSION, INITIAL_FISH, BIRTH_PELLETS, MAX_PELLETS, JOURNEY_TOKENS } from './config.js'
+import { STORAGE_KEY, STATE_VERSION, INITIAL_FISH, BIRTH_PELLETS, MAX_PELLETS, JOURNEY_TOKENS, COLLECTION_GUARANTEE } from './config.js'
 
   function naturalCount(value, fallback) {
     return isNumber(value) ? Math.max(0, Math.floor(value)) : fallback
@@ -24,6 +24,8 @@ import { STORAGE_KEY, STATE_VERSION, INITIAL_FISH, BIRTH_PELLETS, MAX_PELLETS, J
       turtle: saved.turtle && isNumber(saved.turtle.unlockedAt) ? { unlockedAt: saved.turtle.unlockedAt, x: clamp(isNumber(saved.turtle.x) ? saved.turtle.x : 0.5, 0.08, 0.92), facing: saved.turtle.facing === -1 ? -1 : 1 } : null,
       journeyProgress: naturalCount(saved.journeyProgress, 0) % JOURNEY_TOKENS,
       tickets: naturalCount(saved.tickets, 0), visitPity: clamp(naturalCount(saved.visitPity, 0), 0, 9),
+      collectionMisses: clamp(naturalCount(saved.collectionMisses, 0), 0, COLLECTION_GUARANTEE - 1),
+      feedingBalance: !parsed || saved.feedingBalance === true,
       breedPity: clamp(naturalCount(saved.breedPity, 0), 0, 7),
       pairIds: Array.isArray(saved.pairIds) ? saved.pairIds.filter(function (id) { return typeof id === 'string' }).slice(0, 2) : [],
       nursery: nursery, archive: archive, discovered: discovered,
