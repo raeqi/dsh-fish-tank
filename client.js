@@ -1,3 +1,4 @@
+"use strict";
 var DshFishTank = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -2877,6 +2878,25 @@ void main() {
     ".dsw-fish-resident{display:flex;gap:10px;align-items:center;min-width:0;font-size:12px}",
     ".dsw-fish-resident .dsw-fish-thumb{width:46px;height:46px}",
     ".dsw-fish-resident>.dsw-fish-small-button{margin-left:auto;flex:none}",
+    ".dsw-fish-resident-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:10px;align-items:start}",
+    ".dsw-fish-resident-group{min-width:0;border:1px solid color-mix(in srgb,var(--dsw-alias-label-secondary) 20%,transparent);border-radius:9px;background:color-mix(in srgb,var(--dsw-alias-label-secondary) 4%,transparent)}",
+    ".dsw-fish-resident-group>summary{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;list-style:none;font-size:12px;line-height:18px}",
+    ".dsw-fish-resident-group>summary::-webkit-details-marker{display:none}",
+    ".dsw-fish-resident-group>summary::after{content:'';flex:none;margin-left:auto;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;opacity:.45;transform:rotate(45deg) translateY(-2px)}",
+    ".dsw-fish-resident-group[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}",
+    ".dsw-fish-resident-group[open]>summary{border-bottom:1px solid color-mix(in srgb,var(--dsw-alias-label-secondary) 16%,transparent)}",
+    ".dsw-fish-resident-group .dsw-fish-thumb{width:38px;height:38px}",
+    ".dsw-fish-group-text{display:flex;flex-direction:column;min-width:0;overflow:hidden}",
+    ".dsw-fish-group-text>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}",
+    ".dsw-fish-group-text small{font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary)}",
+    ".dsw-fish-resident-group.rarity-1 .dsw-fish-group-text small{color:#6389b0}",
+    ".dsw-fish-resident-group.rarity-2 .dsw-fish-group-text small{color:#b58c3f}",
+    ".dsw-fish-roster.is-nested{display:flex;flex-direction:column;gap:0;margin:0;padding:2px 10px 6px}",
+    ".dsw-fish-resident.is-compact{gap:8px;padding:6px 0;border-top:1px solid color-mix(in srgb,var(--dsw-alias-label-secondary) 12%,transparent)}",
+    ".dsw-fish-resident.is-compact:first-child{border-top:0}",
+    ".dsw-fish-resident-detail{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-secondary)}",
+    ".dsw-fish-group-actions{display:flex;justify-content:flex-end;padding:0 10px 10px}",
+    "@media(max-width:560px){.dsw-fish-resident-groups{grid-template-columns:1fr}}",
     ".dsw-fish-game-rules p{margin:10px 0;font-size:12px;color:var(--dsw-alias-label-secondary);line-height:1.8}",
     ".dsw-fish-journal{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:20px}",
     "@media(max-width:850px){.dsw-fish-game-grid{grid-template-columns:1fr}.dsw-fish-species-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.dsw-fish-roster{grid-template-columns:1fr}.dsw-fish-tank{height:440px}}",
@@ -3152,6 +3172,11 @@ void main() {
         var collectionState = React.useState(false);
         var collectionOpen = collectionState[0];
         var setCollectionOpen = collectionState[1];
+        var groupState = React.useState(function() {
+          return {};
+        });
+        var groupOpen = groupState[0];
+        var setGroupOpen = groupState[1];
         var remoteState = React.useState(function() {
           return { ready: false, synced: false, path: "", mode: "host", account: "unavailable" };
         });
@@ -3377,6 +3402,48 @@ void main() {
         function speciesName(index) {
           return t("species." + DshFishTank.SPECIES_INFO[index].key);
         }
+        function residentGroups(residents) {
+          var groups2 = [];
+          var bySpecies = {};
+          for (var index = 0; index < residents.length; index += 1) {
+            var fish = residents[index];
+            var group = bySpecies[fish.species];
+            if (group === void 0) {
+              group = { species: fish.species, fish: [], min: fish.generation, max: fish.generation };
+              bySpecies[fish.species] = group;
+              groups2.push(group);
+            }
+            group.fish.push(fish);
+            if (fish.generation < group.min) group.min = fish.generation;
+            if (fish.generation > group.max) group.max = fish.generation;
+          }
+          for (var g = 0; g < groups2.length; g += 1) {
+            groups2[g].fish.sort(function(a, b) {
+              return b.growth - a.growth || a.generation - b.generation || (a.id < b.id ? -1 : 1);
+            });
+          }
+          groups2.sort(function(a, b) {
+            return b.fish.length - a.fish.length || a.species - b.species;
+          });
+          return groups2;
+        }
+        function archiveGroup(group) {
+          var changed = false;
+          for (var index = 0; index < group.fish.length; index += 1) {
+            if (store.archiveFish(group.fish[index].id)) changed = true;
+          }
+          if (!changed) return;
+          persist();
+          publish(true);
+        }
+        function toggleGroup(key, open) {
+          setGroupOpen(function(previous) {
+            if (previous[key] === open) return previous;
+            var next = Object.assign({}, previous);
+            next[key] = open;
+            return next;
+          });
+        }
         function rarityName(index) {
           return t("rarity." + DshFishTank.SPECIES_INFO[index].rarity);
         }
@@ -3401,6 +3468,7 @@ void main() {
           );
         }
         var game = stats.game;
+        var groups = residentGroups(game.residents);
         var nurseryStatus = game.nursery ? game.nursery.waiting ? t("game.nurseryWaiting") : t("game.hatching", { minutes: Math.ceil(game.nursery.remaining / 6e4) }) : game.pair.length < 2 ? t("game.needParents") : game.cooldown > 0 ? t("game.resting", { minutes: Math.ceil(game.cooldown / 6e4) }) : t("game.bond", { count: game.bond });
         var garden = game.garden;
         var gamePanels = h(
@@ -3459,16 +3527,60 @@ void main() {
                 h("small", null, locked ? t("game.undiscovered") : rarityName(index))
               );
             })),
-            h("h3", null, t("game.residents", { count: game.residents.length })),
-            h("div", { className: "dsw-fish-roster" }, game.residents.map(function(fish) {
+            h(
+              "h3",
+              null,
+              t("game.residents", { count: game.residents.length }),
+              groups.length > 1 && h("span", { className: "dsw-fish-stored-count" }, t("game.residentSpecies", { count: groups.length }))
+            ),
+            game.residents.length > 0 && h("p", { className: "dsw-fish-game-description" }, t("game.residentGroupsHint")),
+            h("div", { className: "dsw-fish-resident-groups" }, groups.map(function(group) {
+              var info = DshFishTank.SPECIES_INFO[group.species];
+              var generations = group.min === group.max ? t("game.generation", { generation: group.min }) : t("game.generationRange", { from: group.min, to: group.max });
+              var expanded = groupOpen[info.key] === void 0 ? game.residents.length <= 8 : groupOpen[info.key];
               return h(
-                "div",
-                { key: fish.id, className: "dsw-fish-resident" },
-                fishThumb(fish.species),
-                h("div", null, h("span", null, speciesName(fish.species)), h("small", null, t("game.fishDetail", { rarity: rarityName(fish.species), generation: fish.generation, growth: Math.round(fish.growth * 100) }))),
-                h("button", { type: "button", className: "dsw-fish-small-button", "aria-label": t("game.archiveFish", { name: speciesName(fish.species) }), onClick: function() {
-                  gameAction(store.archiveFish, fish.id);
-                } }, t("game.archive"))
+                "details",
+                {
+                  key: info.key,
+                  className: "dsw-fish-resident-group rarity-" + info.rarity,
+                  open: expanded,
+                  onToggle: function(event) {
+                    toggleGroup(info.key, event.currentTarget.open);
+                  }
+                },
+                h(
+                  "summary",
+                  null,
+                  fishThumb(group.species),
+                  h(
+                    "span",
+                    { className: "dsw-fish-group-text" },
+                    h("span", null, speciesName(group.species)),
+                    h("small", null, rarityName(group.species) + " \xB7 " + t("game.groupCount", { count: group.fish.length }) + " \xB7 " + generations)
+                  )
+                ),
+                h("div", { className: "dsw-fish-roster is-nested" }, group.fish.map(function(fish) {
+                  return h(
+                    "div",
+                    { key: fish.id, className: "dsw-fish-resident is-compact" },
+                    h("span", { className: "dsw-fish-resident-detail" }, t("game.fishDetailCompact", { generation: fish.generation, growth: Math.round(fish.growth * 100) })),
+                    h("button", {
+                      type: "button",
+                      className: "dsw-fish-small-button",
+                      "aria-label": t("game.archiveFish", { name: speciesName(fish.species) }),
+                      onClick: function() {
+                        gameAction(store.archiveFish, fish.id);
+                      }
+                    }, t("game.archiveShort"))
+                  );
+                })),
+                group.fish.length > 1 && h(
+                  "div",
+                  { className: "dsw-fish-group-actions" },
+                  h("button", { type: "button", className: "dsw-fish-small-button", onClick: function() {
+                    archiveGroup(group);
+                  } }, t("game.archiveGroup", { count: group.fish.length }))
+                )
               );
             })),
             h("h3", null, t("game.sanctuary", { count: game.archive.length })),
@@ -3662,6 +3774,14 @@ void main() {
       "game.collection": "\u9C7C\u518C \xB7 \u5DF2\u53D1\u73B0 {count} / {total} \u79CD",
       "game.undiscovered": "\u5C1A\u672A\u53D1\u73B0",
       "game.residents": "\u7F38\u5185\u5C45\u6C11 \xB7 {count} \u6761",
+      "game.residentSpecies": "{count} \u79CD",
+      "game.residentGroupsHint": "\u6309\u54C1\u79CD\u5408\u5E76\u663E\u793A\uFF1B\u5C55\u5F00\u4E00\u7EC4\u53EF\u5355\u72EC\u5B89\u7F6E\uFF0C\u6216\u6574\u7EC4\u653E\u8FDB\u6536\u85CF\u6C60\u3002",
+      "game.groupCount": "{count} \u6761",
+      "game.generation": "\u7B2C {generation} \u4EE3",
+      "game.generationRange": "\u7B2C {from}\u2013{to} \u4EE3",
+      "game.fishDetailCompact": "\u7B2C {generation} \u4EE3 \xB7 \u6210\u957F {growth}%",
+      "game.archiveShort": "\u5B89\u7F6E",
+      "game.archiveGroup": "\u5168\u90E8\u5B89\u7F6E\uFF08{count} \u6761\uFF09",
       "game.fishDetail": "{rarity} \xB7 \u7B2C {generation} \u4EE3 \xB7 \u6210\u957F {growth}%",
       "game.archive": "\u5B89\u7F6E\u5230\u6536\u85CF\u6C60",
       "game.restore": "\u63A5\u56DE\u9C7C\u7F38",
@@ -3774,6 +3894,14 @@ void main() {
       "game.collection": "Fish journal \xB7 {count} / {total} species",
       "game.undiscovered": "Undiscovered",
       "game.residents": "Tank residents \xB7 {count}",
+      "game.residentSpecies": "{count} species",
+      "game.residentGroupsHint": "Grouped by species. Expand a group to store one fish, or store the whole group.",
+      "game.groupCount": "{count} fish",
+      "game.generation": "Generation {generation}",
+      "game.generationRange": "Generations {from}\u2013{to}",
+      "game.fishDetailCompact": "Generation {generation} \xB7 Growth {growth}%",
+      "game.archiveShort": "Store",
+      "game.archiveGroup": "Store all ({count})",
       "game.fishDetail": "{rarity} \xB7 Generation {generation} \xB7 Growth {growth}%",
       "game.archive": "Move to sanctuary",
       "game.restore": "Return to tank",

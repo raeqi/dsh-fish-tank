@@ -317,4 +317,70 @@ cleanup()
   cleanup()
 }
 
+{
+  localStorage.clear()
+  const seeded = [
+    fish('angel-a', { species: 2, generation: 0, growth: 0.95 }),
+    fish('angel-b', { species: 2, generation: 1, growth: 0.8 }),
+    fish('angel-c', { species: 2, generation: 1, growth: 0.6 }),
+    fish('tetra-a', { species: 3, generation: 0, growth: 0.7 }),
+    fish('tetra-b', { species: 3, generation: 1, growth: 0.5 }),
+    fish('betta-a', { species: 0, generation: 0, growth: 0.6 }),
+  ]
+  localStorage.setItem('dsh.fish-tank.v1', JSON.stringify(stored(seeded, { updatedAt: Date.now() })))
+  sessionState = sessionsWith(0)
+  const { t, page } = install()
+  const view = mount(page, t)
+  flushFrames()
+  const collection = view.container.querySelector('.dsw-fish-collection')
+  act(() => {
+    collection.open = true
+    collection.dispatchEvent(new window.Event('toggle'))
+  })
+  const groups = view.container.querySelectorAll('.dsw-fish-resident-groups .dsw-fish-resident-group')
+  assert.equal(groups.length, 3, 'residents fold into one group per species')
+  assert.equal(groups[0].tagName, 'DETAILS', 'each group is collapsible')
+  assert.equal(groups[0].open, true, 'small tanks expand every group')
+  assert.equal(groups[0].querySelectorAll('.dsw-fish-resident').length, 3, 'the largest group comes first')
+  assert.match(groups[0].querySelector('summary').textContent, /3 fish/)
+  const residentRows = view.container.querySelectorAll('.dsw-fish-resident-groups .dsw-fish-resident')
+  assert.equal(residentRows.length, 6, 'every resident appears exactly once')
+  for (const row of residentRows) assert.ok(row.querySelector('button'), 'each resident keeps its store button')
+  assert.ok(view.container.querySelector('.dsw-fish-group-actions button'), 'a whole group can be stored at once')
+  cleanup()
+}
+
+{
+  localStorage.clear()
+  const seeded = []
+  for (let index = 0; index < 8; index += 1) {
+    seeded.push(fish('angel-' + index, { species: 2, generation: index % 3, growth: 0.9 - index * 0.05 }))
+  }
+  for (let index = 0; index < 4; index += 1) {
+    seeded.push(fish('tetra-' + index, { species: 3, generation: 0, growth: 0.7 - index * 0.05 }))
+  }
+  localStorage.setItem('dsh.fish-tank.v1', JSON.stringify(stored(seeded, { updatedAt: Date.now() })))
+  sessionState = sessionsWith(0)
+  const { t, page } = install()
+  const view = mount(page, t)
+  flushFrames()
+  const collection = view.container.querySelector('.dsw-fish-collection')
+  act(() => {
+    collection.open = true
+    collection.dispatchEvent(new window.Event('toggle'))
+  })
+  const groups = view.container.querySelectorAll('.dsw-fish-resident-groups .dsw-fish-resident-group')
+  assert.equal(groups.length, 2, 'two species, two groups')
+  assert.equal(groups[0].open, false, 'large tanks start collapsed')
+  assert.match(groups[0].querySelector('summary').textContent, /8 fish/)
+  const storeAll = groups[0].querySelector('.dsw-fish-group-actions button')
+  assert.ok(storeAll, 'the largest group offers a bulk action')
+  fireEvent.click(storeAll)
+  flushFrames()
+  const saved = JSON.parse(localStorage.getItem('dsh.fish-tank.v1'))
+  assert.equal(saved.fish.length, 4, 'storing a group moves every fish in it')
+  assert.equal(saved.game.archive.length, 8, 'the whole group reaches the sanctuary')
+  cleanup()
+}
+
 console.log('fish tank UI flow: ok')
